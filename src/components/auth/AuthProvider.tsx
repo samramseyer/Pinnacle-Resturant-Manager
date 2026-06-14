@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import type { AppRole } from "@prisma/client";
+import type { PlanId } from "@/lib/plans";
 import { hasPermission, type Permission } from "@/lib/permissions";
 
 export interface AuthUser {
@@ -10,6 +11,7 @@ export interface AuthUser {
   name: string;
   role: AppRole;
   locationId: string | null;
+  plan?: PlanId;
 }
 
 interface AuthContextValue {

@@ -73,6 +73,12 @@ enum AppRole {
   HOST
 }
 
+enum SubscriptionPlan {
+  STARTER
+  GROWTH
+  PRO
+}
+
 enum SocialPlatform {
   FACEBOOK
   INSTAGRAM
@@ -120,6 +126,7 @@ model Location {
   phone         String?
   seatCount     Int      @default(40)
   squareFootage Float    @default(2000)
+  plan          SubscriptionPlan @default(STARTER)
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

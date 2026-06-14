@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { getLocationId } from "@/lib/location";
 import { getSessionUser } from "@/lib/auth";
@@ -78,5 +79,9 @@ async function getDashboardData() {
 
 export default async function DashboardPage() {
   const data = await getDashboardData();
-  return <DashboardClient data={data} />;
+  return (
+    <Suspense fallback={null}>
+      <DashboardClient data={data} />
+    </Suspense>
+  );
 }

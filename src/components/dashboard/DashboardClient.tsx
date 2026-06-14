@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Camera,
   Package,
@@ -13,6 +14,7 @@ import {
 import { PageHeader, StatCard, Badge } from "@/components/ui";
 import { InsightPanel } from "@/components/insights/InsightPanel";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { PLAN_BY_ID, requiredPlanForRoute } from "@/lib/plans";
 import { formatCurrency } from "@/lib/utils";
 
 interface DashboardData {
@@ -40,6 +42,8 @@ interface DashboardData {
 }
 
 export function DashboardClient({ data }: { data: DashboardData }) {
+  const searchParams = useSearchParams();
+  const upgradeFeature = searchParams.get("upgrade");
   const { can, user } = useAuth();
   const canViewFinances = can("view_finances");
   const canViewInsights = can("view_insights");
@@ -78,6 +82,27 @@ export function DashboardClient({ data }: { data: DashboardData }) {
           Capture Photo
         </Link>
       </PageHeader>
+
+      {upgradeFeature && (
+        <div className="mb-6 rounded-xl border border-orange-200 bg-orange-50 p-4">
+          <p className="text-sm font-medium text-orange-900">
+            Upgrade to unlock {upgradeFeature}
+          </p>
+          <p className="mt-1 text-sm text-orange-800">
+            Your {user?.plan ? PLAN_BY_ID[user.plan].name : "current"} plan does not include this
+            feature.{" "}
+            {requiredPlanForRoute(`/${upgradeFeature}`)
+              ? `Upgrade to ${PLAN_BY_ID[requiredPlanForRoute(`/${upgradeFeature}`)!].name} or higher.`
+              : "Choose a higher plan to get access."}
+          </p>
+          <Link
+            href="/docs/#pricing"
+            className="mt-3 inline-flex text-sm font-medium text-orange-600 hover:text-orange-500"
+          >
+            View plans →
+          </Link>
+        </div>
+      )}
 
       {data.menuCount === 0 && canSeed && (
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">

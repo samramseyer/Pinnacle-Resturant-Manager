@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { parseSessionToken, AUTH_COOKIE_NAME } from "@/lib/session";
 import { canAccessRoute } from "@/lib/permissions";
+import { canAccessPlanRoute } from "@/lib/plans";
 import { getEmbedFrameAncestors, getMarketingFrameAncestors, isEmbeddableRequest, isEmbeddableEmbedParam } from "@/lib/embed-config";
 import { applyEmbedSessionParam } from "@/lib/embed-session-middleware";
 
@@ -126,6 +127,18 @@ export async function middleware(request: NextRequest) {
       );
     }
     return applyFramePolicy(request, NextResponse.redirect(new URL("/dashboard", request.url)));
+  }
+
+  if (!canAccessPlanRoute(user.plan, pathname)) {
+    if (pathname.startsWith("/api/")) {
+      return applyFramePolicy(
+        request,
+        NextResponse.json({ error: "Upgrade your plan to access this feature" }, { status: 403 })
+      );
+    }
+    const upgradeUrl = new URL("/dashboard", request.url);
+    upgradeUrl.searchParams.set("upgrade", pathname.split("/").filter(Boolean)[0] ?? "");
+    return applyFramePolicy(request, NextResponse.redirect(upgradeUrl));
   }
 
   return applyFramePolicy(request, NextResponse.next());

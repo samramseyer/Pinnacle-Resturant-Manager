@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { MOBILE_PRIMARY_NAV_HREFS, NAV_ITEMS } from "@/lib/constants";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { filterNavForRole } from "@/lib/permissions";
+import { filterNavForUser } from "@/lib/permissions";
 import { EmbedNavLink } from "@/components/layout/useEmbedHref";
 
 type NavItem = { href: string; label: string; icon: string };
@@ -88,7 +88,7 @@ export function MobileNav() {
   const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const navItems = user ? filterNavForRole(user.role, NAV_ITEMS) : NAV_ITEMS;
+  const navItems = user ? filterNavForUser(user.role, user.plan, NAV_ITEMS) : NAV_ITEMS;
   const mobileNavItems = useMemo(() => getMobileNavItems(navItems), [navItems]);
   const moreNavItems = useMemo(() => getMoreNavItems(navItems), [navItems]);
   const isMoreNavScreen = moreNavItems.some((item) => item.href === pathname);

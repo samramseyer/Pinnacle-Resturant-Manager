@@ -5,7 +5,11 @@ export async function resolveUserWorkspace(user: SessionUser) {
   if (user.locationId) {
     const location = await prisma.location.findUnique({ where: { id: user.locationId } });
     if (location?.active) {
-      return { locationId: location.id, locationName: location.name };
+      return {
+        locationId: location.id,
+        locationName: location.name,
+        plan: location.plan,
+      };
     }
   }
 
@@ -19,6 +23,7 @@ export async function resolveUserWorkspace(user: SessionUser) {
     data: {
       name: `${user.name}'s Restaurant`,
       address: "Add your address",
+      plan: "STARTER",
     },
   });
 
@@ -27,5 +32,9 @@ export async function resolveUserWorkspace(user: SessionUser) {
     data: { locationId: location.id },
   });
 
-  return { locationId: location.id, locationName: location.name };
+  return {
+    locationId: location.id,
+    locationName: location.name,
+    plan: location.plan,
+  };
 }

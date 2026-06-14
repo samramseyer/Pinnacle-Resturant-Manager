@@ -1,4 +1,6 @@
 import type { AppRole } from "./app-role";
+import type { PlanId } from "./plans";
+import { filterNavForPlan } from "./plans";
 
 export type Permission =
   | "view_finances"
@@ -109,4 +111,12 @@ export function filterNavForRole(
 
   const hidden = new Set(["/finances", "/insights", "/social", "/analytics"]);
   return items.filter((item) => !hidden.has(item.href));
+}
+
+export function filterNavForUser(
+  role: AppRole,
+  plan: PlanId | null | undefined,
+  items: readonly { href: string; label: string; icon: string }[]
+) {
+  return filterNavForPlan(plan, filterNavForRole(role, items));
 }

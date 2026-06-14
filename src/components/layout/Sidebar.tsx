@@ -22,7 +22,8 @@ import { LocationSwitcher } from "@/components/layout/LocationSwitcher";
 import { Logo } from "@/components/layout/Logo";
 import { EmbedNavLink } from "@/components/layout/useEmbedHref";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { filterNavForRole, ROLE_LABELS, ROLE_COLORS } from "@/lib/permissions";
+import { filterNavForUser, ROLE_LABELS, ROLE_COLORS } from "@/lib/permissions";
+import { PLAN_BY_ID } from "@/lib/plans";
 import { Badge } from "@/components/ui";
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -43,7 +44,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
-  const navItems = user ? filterNavForRole(user.role, NAV_ITEMS) : NAV_ITEMS;
+  const navItems = user ? filterNavForUser(user.role, user.plan, NAV_ITEMS) : NAV_ITEMS;
 
   return (
     <aside className="hidden w-64 flex-col border-r bg-slate-900 md:flex">
@@ -74,9 +75,16 @@ export function Sidebar() {
       {user && (
         <div className="border-t border-slate-700 p-4">
           <p className="truncate text-sm font-medium text-white">{user.name}</p>
-          <Badge className={cn("mt-1", ROLE_COLORS[user.role])}>
-            {ROLE_LABELS[user.role]}
-          </Badge>
+          <div className="mt-1 flex flex-wrap gap-1">
+            <Badge className={cn(ROLE_COLORS[user.role])}>
+              {ROLE_LABELS[user.role]}
+            </Badge>
+            {user.plan && (
+              <Badge className="bg-slate-700 text-slate-200">
+                {PLAN_BY_ID[user.plan].name}
+              </Badge>
+            )}
+          </div>
           <button
             type="button"
             onClick={logout}

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Logo } from "@/components/layout/Logo";
 import { Button } from "@/components/ui";
 import { Input, FormField } from "@/components/ui/form";
+import { SignupPlanModal } from "@/components/auth/SignupPlanModal";
 
 export default function LoginForm() {
   const searchParams = useSearchParams();
@@ -13,6 +14,7 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [signupOpen, setSignupOpen] = useState(false);
 
   const completeLogin = async () => {
     const res = await fetch("/api/auth/login", {
@@ -86,13 +88,17 @@ export default function LoginForm() {
         </form>
 
         <div className="mt-6">
-          <Link
-            href="/signup"
-            className="inline-flex w-full items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full"
+            onClick={() => setSignupOpen(true)}
           >
             Create account
-          </Link>
+          </Button>
         </div>
+
+        <SignupPlanModal open={signupOpen} onClose={() => setSignupOpen(false)} />
 
         <p className="mt-4 text-center text-sm text-slate-400">
           Just exploring?{" "}

@@ -5,6 +5,7 @@ import {
   sessionCookieOptions,
   getSessionUserFromRequest,
 } from "@/lib/auth";
+import { enrichUserWithPlan } from "@/lib/location-plan";
 import { LOCATION_COOKIE_NAME } from "@/lib/location";
 import { setupDemoWorkspace, type DemoMode } from "@/lib/seed-data";
 import { applyEmbedAuthCookies } from "@/lib/embed-cookies";
@@ -16,7 +17,8 @@ export async function GET(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ user: null });
   }
-  return NextResponse.json({ user });
+  const enriched = await enrichUserWithPlan(user);
+  return NextResponse.json({ user: enriched });
 }
 
 export async function POST(request: NextRequest) {
@@ -28,7 +30,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
   }
 
-  const token = await createSessionToken(user);
   const forEmbed = body.embed === true;
   const demoMode: DemoMode = body.demoMode === "fresh" ? "fresh" : "seeded";
   const useDemoWorkspace = body.demo === true && (body.demoMode === "seeded" || body.demoMode === "fresh");
@@ -62,13 +63,18 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const locationId = workspace?.locationId ?? user.locationId;
+  const sessionUser = await enrichUserWithPlan({
+    ...user,
+    locationId,
+  });
+  const token = await createSessionToken(sessionUser);
+
   const response = NextResponse.json({
-    user,
+    user: sessionUser,
     workspace,
     workspaceError,
   });
-
-  const locationId = workspace?.locationId;
 
   if (forEmbed) {
     if (locationId) {

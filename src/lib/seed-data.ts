@@ -193,7 +193,16 @@ export async function getOrCreateDemoLocation(mode: DemoMode) {
   });
   if (existing) {
     if (existing.name !== name) {
-      return prisma.location.update({ where: { id: existing.id }, data: { name } });
+      return prisma.location.update({
+        where: { id: existing.id },
+        data: { name, plan: "PRO" },
+      });
+    }
+    if (existing.plan !== "PRO") {
+      return prisma.location.update({
+        where: { id: existing.id },
+        data: { plan: "PRO" },
+      });
     }
     return existing;
   }
@@ -202,6 +211,7 @@ export async function getOrCreateDemoLocation(mode: DemoMode) {
     data: {
       name,
       address: mode === "seeded" ? "123 Restaurant Row" : "Add your address",
+      plan: "PRO",
     },
   });
 }
@@ -218,6 +228,7 @@ export async function setupDemoWorkspace(mode: DemoMode) {
     mode,
     locationId: location.id,
     locationName: location.name,
+    plan: location.plan,
     seeded: mode === "seeded",
     seedResult,
   };

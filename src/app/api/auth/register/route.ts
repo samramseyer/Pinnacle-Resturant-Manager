@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionToken, hashPassword, sessionCookieOptions } from "@/lib/auth";
+import { enrichUserWithPlan } from "@/lib/location-plan";
 import { LOCATION_COOKIE_NAME } from "@/lib/location";
+import { parsePlanId } from "@/lib/plans";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
@@ -9,6 +11,7 @@ export async function POST(request: NextRequest) {
   const email = String(body.email || "").trim().toLowerCase();
   const password = String(body.password || "");
   const restaurantName = String(body.restaurantName || "").trim() || `${name}'s Restaurant`;
+  const plan = parsePlanId(body.plan) ?? "GROWTH";
 
   if (!name || !email || !password) {
     return NextResponse.json({ error: "Name, email, and password are required" }, { status: 400 });
@@ -27,6 +30,7 @@ export async function POST(request: NextRequest) {
     data: {
       name: restaurantName,
       address: "Add your address",
+      plan,
     },
   });
 
@@ -41,13 +45,13 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  const sessionUser = {
+  const sessionUser = await enrichUserWithPlan({
     id: user.id,
     email: user.email,
     name: user.name,
     role: user.role,
     locationId: user.locationId,
-  };
+  });
 
   const token = await createSessionToken(sessionUser);
   const response = NextResponse.json({
@@ -55,6 +59,7 @@ export async function POST(request: NextRequest) {
     workspace: {
       locationId: location.id,
       locationName: location.name,
+      plan: location.plan,
     },
   });
 

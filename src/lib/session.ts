@@ -1,4 +1,5 @@
 import type { AppRole } from "./app-role";
+import type { PlanId } from "./plans";
 
 export const AUTH_COOKIE_NAME = "pinnacle_session";
 export const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -9,6 +10,7 @@ export interface SessionUser {
   name: string;
   role: AppRole;
   locationId: string | null;
+  plan?: PlanId;
 }
 
 function getSecret(): string {
@@ -91,6 +93,7 @@ export async function parseSessionToken(token: string): Promise<SessionUser | nu
       name: data.name,
       role: data.role,
       locationId: data.locationId,
+      plan: data.plan,
     };
   } catch {
     return null;
