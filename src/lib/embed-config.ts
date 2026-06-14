@@ -65,6 +65,9 @@ export function getEmbedFrameAncestors(request?: { nextUrl: URL }): string {
   return parts.join(" ");
 }
 
+/** Local ports used when previewing docs/ via Live Server or another static server. */
+const LOCAL_DOCS_PORTS = [3000, 3001, 3002, 3003, 3004, 3005, 5173, 5500, 8080];
+
 /** Origins allowed to iframe the app (GitHub Pages marketing site, etc.). */
 export function getMarketingFrameAncestors(): string[] {
   const origins: string[] = [];
@@ -77,8 +80,21 @@ export function getMarketingFrameAncestors(): string[] {
   const githubPages = process.env.GITHUB_PAGES_ORIGIN?.trim();
   if (githubPages) origins.push(githubPages);
 
-  // Default: this repo's GitHub Pages (david-foy89.github.io/…)
+  // GitHub Pages (project or user site on any *.github.io host)
   origins.push("https://david-foy89.github.io");
+  origins.push("https://*.github.io");
+
+  // Vercel production + preview deployments (docs at /docs on same project)
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl) origins.push(`https://${vercelUrl}`);
+  const publicAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (publicAppUrl) origins.push(publicAppUrl.replace(/\/$/, ""));
+
+  // Live Server / static preview of docs/ against production app
+  for (const port of LOCAL_DOCS_PORTS) {
+    origins.push(`http://localhost:${port}`);
+    origins.push(`http://127.0.0.1:${port}`);
+  }
 
   return origins;
 }

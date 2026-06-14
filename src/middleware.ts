@@ -25,6 +25,7 @@ function applyFramePolicy(request: NextRequest, response: NextResponse): NextRes
       "Content-Security-Policy",
       `frame-ancestors ${getEmbedFrameAncestors(request)}`
     );
+    response.headers.delete("X-Frame-Options");
   } else {
     response.headers.set("Content-Security-Policy", "frame-ancestors 'none'");
     response.headers.set("X-Frame-Options", "DENY");
