@@ -92,9 +92,13 @@ export async function seedAnalyticsSampleData(locationId: string) {
   await prisma.guestReview.createMany({
     data: [
       { locationId, source: "Google", rating: 4.5, comment: "Great salmon and fast service!", category: "service" },
-      { locationId, source: "Google", rating: 3, comment: "Food was good but wait was long", category: "wait_time", resolved: false },
-      { locationId, source: "OpenTable", rating: 5, comment: "Perfect date night spot", category: "ambiance" },
+      { locationId, source: "Google", rating: 3, comment: "Food was good but wait was long", category: "wait_time", resolved: false, createdAt: new Date(now - 2 * 86400000 + 19 * 3600000) },
+      { locationId, source: "Google", rating: 2, comment: "Slow dinner service, waited 40 minutes", category: "wait_time", resolved: false, createdAt: new Date(now - 5 * 86400000 + 20 * 3600000) },
+      { locationId, source: "OpenTable", rating: 5, comment: "Perfect date night spot", category: "ambiance", createdAt: new Date(now - 1 * 86400000 + 20 * 3600000) },
+      { locationId, source: "OpenTable", rating: 4, comment: "Lovely ambiance, dessert was excellent", category: "food_quality", createdAt: new Date(now - 4 * 86400000 + 19 * 3600000) },
+      { locationId, source: "OpenTable", rating: 3, comment: "Reservation mix-up caused a delay", category: "service", resolved: true, createdAt: new Date(now - 8 * 86400000 + 18 * 3600000) },
       { locationId, source: "Yelp", rating: 4, comment: "Loved the pizza", category: "food_quality" },
+      { locationId, source: "Google", rating: 5, comment: "Best lunch special in town", category: "food_quality", createdAt: new Date(now - 3 * 86400000 + 12 * 3600000) },
     ],
   });
 

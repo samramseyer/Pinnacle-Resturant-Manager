@@ -202,7 +202,7 @@ export async function generateBusinessInsights(locationId?: string): Promise<
         {
           role: "system",
           content:
-            "You are a restaurant business analyst with full sales, food cost, labor, menu engineering, and marketing analytics. Analyze the data and identify pain points, risks, and opportunities. You MUST answer sales questions using analytics.sales: (1) What sells? (2) When are we busiest? (3) Which channels are most profitable? You MUST answer food cost questions using analytics.foodCost: (1) Where is product disappearing? (2) Which items are driving food cost increases? (3) Are recipes being followed? You MUST answer labor questions using analytics.labor: (1) Are we overstaffed or understaffed? (2) Which shifts are inefficient? (3) Which employees produce the best results? You MUST answer menu questions using analytics.menuEngineering: (1) What should we promote? (2) What should we reprice? (3) What should we remove? You MUST answer marketing questions using analytics.marketing: (1) Is marketing actually generating sales? — use highlights.salesGenerating; (2) Which channels bring profitable customers? — use highlights.profitableChannels. Reference CAC, ROAS, LTV, repeat visit rate, coupon usage, email, social, website, and Google Business. Return JSON with an insights array. Each insight has: title, description, category (INVENTORY|STAFFING|FINANCE|OPERATIONS|MENU|CUSTOMER|FACILITY|GENERAL), severity (LOW|MEDIUM|HIGH|CRITICAL), actionable (specific action to take). Include insights for each area when data exists. Focus on actionable pain points.",
+            "You are a restaurant business analyst with complete analytics across all 12 sections. Each section has keyQuestions and highlights — answer them with specific numbers. Sections: sales (what sells, busiest times, profitable channels), foodCost (disappearing product, cost drivers, recipes), labor (staffing, inefficient shifts, top performers), menuEngineering (promote, reprice, remove), marketing (generating sales, profitable channels), customerExperience (satisfaction hurts, complaint shifts), operations (bottlenecks, ticket time impact), purchasing (supplier increases, market rates), forecasting (Friday staff, tomorrow inventory), profitability (profit leaks, margin drivers), externalFactors (weather, events), executive (yesterday KPIs, alerts). Return JSON with insights array. Each insight: title, description, category (INVENTORY|STAFFING|FINANCE|OPERATIONS|MENU|CUSTOMER|FACILITY|GENERAL), severity (LOW|MEDIUM|HIGH|CRITICAL), actionable. Include insights for every section that has data.",
         },
         {
           role: "user",
@@ -435,6 +435,176 @@ function generateRuleBasedInsights(snapshot: {
         actionable: `Invest in ${top.channel} acquisition and compare against lower-margin channels.`,
       });
     }
+  }
+
+  const customer = snapshot.analytics?.customerExperience;
+  if (customer?.highlights) {
+    const ch = customer.highlights;
+    if (ch.satisfactionHurts.length > 0) {
+      const top = ch.satisfactionHurts[0]!;
+      insights.push({
+        title: "What is hurting guest satisfaction?",
+        description: `${top.issue} leads with ${top.count} mentions at ${top.avgRating.toFixed(1)}★ average.`,
+        category: "CUSTOMER",
+        severity: top.avgRating < 3.5 ? "HIGH" : "MEDIUM",
+        actionable: `Address ${top.issue} with staff training and process fixes this week.`,
+      });
+    }
+
+    if (ch.complaintHotspots.length > 0) {
+      const hotspot = ch.complaintHotspots[0]!;
+      insights.push({
+        title: "Shift with most complaints",
+        description: `${hotspot.label} shift has ${hotspot.count} negative reviews${hotspot.topCategory ? ` — mostly ${hotspot.topCategory}` : ""}.`,
+        category: "CUSTOMER",
+        severity: hotspot.count >= 2 ? "HIGH" : "MEDIUM",
+        actionable: `Review staffing and service standards during ${hotspot.label} service.`,
+      });
+    }
+  }
+
+  const operations = snapshot.analytics?.operations;
+  if (operations?.highlights) {
+    const oh = operations.highlights;
+    if (oh.bottlenecks.length > 0) {
+      const bn = oh.bottlenecks[0]!;
+      insights.push({
+        title: "Where are bottlenecks?",
+        description: `${bn.label} averages ${bn.avgTicketMinutes.toFixed(0)} min across ${bn.orders} orders.`,
+        category: "OPERATIONS",
+        severity: bn.avgTicketMinutes > 25 ? "HIGH" : "MEDIUM",
+        actionable: `Add kitchen capacity or prep ahead for ${bn.label} peak.`,
+      });
+    }
+
+    insights.push({
+      title: "Are long ticket times hurting sales?",
+      description: oh.ticketTimeImpact.reason,
+      category: "OPERATIONS",
+      severity: oh.ticketTimeImpact.status === "hurting" ? "HIGH" : "MEDIUM",
+      actionable:
+        oh.ticketTimeImpact.status === "hurting"
+          ? "Reduce ticket times on slow dayparts and review line staffing."
+          : "Maintain current ticket time targets and monitor during peak volume.",
+    });
+  }
+
+  const purchasing = snapshot.analytics?.purchasing;
+  if (purchasing?.highlights) {
+    const ph = purchasing.highlights;
+    if (ph.costIncreaseSuppliers.length > 0) {
+      const top = ph.costIncreaseSuppliers[0]!;
+      insights.push({
+        title: "Supplier cost increase",
+        description: `${top.vendor} up ${top.changePct.toFixed(1)}% ($${top.spend.toFixed(0)} spend).`,
+        category: "FINANCE",
+        severity: top.changePct > 7 ? "HIGH" : "MEDIUM",
+        actionable: `Renegotiate with ${top.vendor} or source alternatives.`,
+      });
+    }
+    if (ph.marketRateStatus.status === "above") {
+      insights.push({
+        title: "Above market rates",
+        description: ph.marketRateStatus.reason,
+        category: "FINANCE",
+        severity: "MEDIUM",
+        actionable: "Run vendor comparison and switch where savings exceed 5%.",
+      });
+    }
+  }
+
+  const forecasting = snapshot.analytics?.forecasting;
+  if (forecasting?.highlights) {
+    const fh = forecasting.highlights;
+    insights.push({
+      title: "How much staff do I need next Friday?",
+      description: `${fh.staffNeededNextFriday.hours.toFixed(0)} labor hours projected for ${fh.staffNeededNextFriday.date} ($${fh.staffNeededNextFriday.predictedSales.toFixed(0)} predicted sales).`,
+      category: "STAFFING",
+      severity: "LOW",
+      actionable: "Publish the Friday schedule 5 days ahead.",
+    });
+    if (fh.inventoryOrderTomorrow.length > 0) {
+      insights.push({
+        title: "How much inventory should I order tomorrow?",
+        description: fh.inventoryOrderTomorrow
+          .map((i) => `${i.name}: ${i.quantity} ${i.unit}`)
+          .join("; "),
+        category: "INVENTORY",
+        severity: fh.inventoryOrderTomorrow.length > 3 ? "HIGH" : "MEDIUM",
+        actionable: "Place vendor orders today for low-stock items before tomorrow's service.",
+      });
+    }
+  }
+
+  const profitability = snapshot.analytics?.profitability;
+  if (profitability?.highlights) {
+    const prh = profitability.highlights;
+    if (prh.profitLeaks.length > 0) {
+      const leak = prh.profitLeaks[0]!;
+      insights.push({
+        title: "Where is profit leaking?",
+        description: `${leak.area}: $${leak.amount.toFixed(0)} — ${leak.reason}.`,
+        category: "FINANCE",
+        severity: "MEDIUM",
+        actionable: `Tighten controls on ${leak.area.toLowerCase()}.`,
+      });
+    }
+    if (prh.marginDrivers.length > 0) {
+      insights.push({
+        title: "Which items, hours, and channels drive margin?",
+        description: prh.marginDrivers
+          .map((d) => `${d.name} (${d.type}): $${d.profit.toFixed(0)}`)
+          .join("; "),
+        category: "FINANCE",
+        severity: "MEDIUM",
+        actionable: "Double down on top margin drivers and reprice or remove weak performers.",
+      });
+    }
+  }
+
+  const external = snapshot.analytics?.externalFactors;
+  if (external?.highlights) {
+    const eh = external.highlights;
+    if (eh.weatherImpact) {
+      insights.push({
+        title: "How does weather affect sales?",
+        description: eh.weatherImpact.insight,
+        category: "GENERAL",
+        severity: Math.abs(eh.weatherImpact.avgImpactPct) > 15 ? "MEDIUM" : "LOW",
+        actionable: "Adjust staffing and promotions when adverse weather is forecast.",
+      });
+    }
+    if (eh.topEvents.length > 0) {
+      const ev = eh.topEvents[0]!;
+      insights.push({
+        title: "Which local events boost traffic?",
+        description: `${ev.description} boosts traffic ~${ev.impactPct.toFixed(0)}%.`,
+        category: "GENERAL",
+        severity: "LOW",
+        actionable: "Staff up and promote specials during this event window.",
+      });
+    }
+  }
+
+  const executive = snapshot.analytics?.executive;
+  if (executive?.yesterday) {
+    const y = executive.yesterday;
+    insights.push({
+      title: "Yesterday performance",
+      description: `Net sales $${y.netSales.toFixed(0)}, prime cost ${y.primeCostPct.toFixed(1)}%, est. profit $${y.profitEstimate.toFixed(0)} from ${y.guestCount} guests.`,
+      category: "FINANCE",
+      severity: y.primeCostPct > 65 ? "HIGH" : "LOW",
+      actionable: "Review yesterday's prime cost breakdown and address any alerts.",
+    });
+  }
+  for (const alert of snapshot.analytics?.executiveAlerts ?? []) {
+    insights.push({
+      title: alert.message,
+      description: `Executive alert (${alert.type}) requires attention.`,
+      category: alert.type === "INVENTORY" ? "INVENTORY" : alert.type === "STAFFING" ? "STAFFING" : "OPERATIONS",
+      severity: alert.severity as InsightSeverity,
+      actionable: "Resolve this alert before the next service period.",
+    });
   }
 
   if (snapshot.lowStockItems.length > 0) {

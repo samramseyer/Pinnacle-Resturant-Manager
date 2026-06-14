@@ -1,4 +1,4 @@
-import type { AnalyticsPayload, FoodCostHighlights, LaborHighlights, MarketingHighlights, MenuEngineeringHighlights, SalesHighlights } from "./types";
+import type { AnalyticsPayload, CustomerExperienceHighlights, ExternalFactorsHighlights, FoodCostHighlights, ForecastingHighlights, LaborHighlights, MarketingHighlights, MenuEngineeringHighlights, OperationsHighlights, ProfitabilityHighlights, PurchasingHighlights, SalesHighlights } from "./types";
 
 const EMPTY_SALES_HIGHLIGHTS: SalesHighlights = {
   topSellingItem: null,
@@ -40,6 +40,42 @@ const EMPTY_MARKETING_HIGHLIGHTS: MarketingHighlights = {
     returnOnAdSpend: 0,
   },
   profitableChannels: [],
+};
+
+const EMPTY_CUSTOMER_HIGHLIGHTS: CustomerExperienceHighlights = {
+  satisfactionHurts: [],
+  complaintHotspots: [],
+  sentimentSummary: { positive: 0, neutral: 0, negative: 0, overall: "mixed" },
+};
+
+const EMPTY_OPERATIONS_HIGHLIGHTS: OperationsHighlights = {
+  bottlenecks: [],
+  ticketTimeImpact: {
+    status: "no_data",
+    reason: "No operations data available.",
+    slowOrderPct: 0,
+    avgTicketTimeMinutes: 0,
+  },
+};
+
+const EMPTY_PURCHASING_HIGHLIGHTS: PurchasingHighlights = {
+  costIncreaseSuppliers: [],
+  marketRateStatus: { status: "unknown", reason: "No purchasing data." },
+};
+
+const EMPTY_FORECASTING_HIGHLIGHTS: ForecastingHighlights = {
+  staffNeededNextFriday: { hours: 0, predictedSales: 0, date: "" },
+  inventoryOrderTomorrow: [],
+};
+
+const EMPTY_PROFITABILITY_HIGHLIGHTS: ProfitabilityHighlights = {
+  profitLeaks: [],
+  marginDrivers: [],
+};
+
+const EMPTY_EXTERNAL_HIGHLIGHTS: ExternalFactorsHighlights = {
+  weatherImpact: null,
+  topEvents: [],
 };
 
 const EMPTY_MENU_HIGHLIGHTS: MenuEngineeringHighlights = {
@@ -197,55 +233,90 @@ export function normalizeAnalyticsPayload(raw: Partial<AnalyticsPayload> & Recor
       highlights: raw.marketing?.highlights ?? EMPTY_MARKETING_HIGHLIGHTS,
       questions: raw.marketing?.questions ?? [],
     },
-    customerExperience: raw.customerExperience ?? {
-      avgRating: 0,
-      reviewCount: 0,
-      bySource: [],
-      complaintCategories: [],
-      unresolvedCount: 0,
-      recentReviews: [],
-      questions: [],
+    customerExperience: {
+      avgRating: raw.customerExperience?.avgRating ?? 0,
+      reviewCount: raw.customerExperience?.reviewCount ?? 0,
+      starDistribution: raw.customerExperience?.starDistribution ?? [],
+      bySource: raw.customerExperience?.bySource ?? [],
+      googleReviews: raw.customerExperience?.googleReviews ?? {
+        count: 0,
+        avgRating: 0,
+        unresolved: 0,
+        recent: [],
+      },
+      openTableReviews: raw.customerExperience?.openTableReviews ?? {
+        count: 0,
+        avgRating: 0,
+        unresolved: 0,
+        recent: [],
+      },
+      surveyResults: raw.customerExperience?.surveyResults ?? [],
+      complaintCategories: raw.customerExperience?.complaintCategories ?? [],
+      resolutionTimes: raw.customerExperience?.resolutionTimes ?? {
+        avgDaysToResolve: 0,
+        unresolvedAvgDays: 0,
+        resolvedCount: 0,
+        unresolvedCount: 0,
+      },
+      sentiment: raw.customerExperience?.sentiment ?? { positive: 0, neutral: 0, negative: 0 },
+      complaintsByDaypart: raw.customerExperience?.complaintsByDaypart ?? [],
+      unresolvedCount: raw.customerExperience?.unresolvedCount ?? 0,
+      recentReviews: raw.customerExperience?.recentReviews ?? [],
+      highlights: raw.customerExperience?.highlights ?? EMPTY_CUSTOMER_HIGHLIGHTS,
+      questions: raw.customerExperience?.questions ?? [],
     },
-    operations: raw.operations ?? {
-      avgTicketTimeMinutes: 0,
-      orderAccuracyPct: 0,
-      voidRatePct: 0,
-      discountRatePct: 0,
-      compRatePct: 0,
-      refundTotal: 0,
-      bottleneckDaypart: "dinner",
-      questions: [],
+    operations: {
+      avgTicketTimeMinutes: raw.operations?.avgTicketTimeMinutes ?? 0,
+      avgKitchenProductionMinutes: raw.operations?.avgKitchenProductionMinutes ?? 0,
+      orderAccuracyPct: raw.operations?.orderAccuracyPct ?? 0,
+      voidRatePct: raw.operations?.voidRatePct ?? 0,
+      voidTotal: raw.operations?.voidTotal ?? 0,
+      discountRatePct: raw.operations?.discountRatePct ?? 0,
+      discountTotal: raw.operations?.discountTotal ?? 0,
+      compRatePct: raw.operations?.compRatePct ?? 0,
+      compTotal: raw.operations?.compTotal ?? 0,
+      refundTotal: raw.operations?.refundTotal ?? 0,
+      refundRatePct: raw.operations?.refundRatePct ?? 0,
+      bottleneckDaypart: raw.operations?.bottleneckDaypart ?? "dinner",
+      ticketTimesByDaypart: raw.operations?.ticketTimesByDaypart ?? [],
+      ticketTimesByHour: raw.operations?.ticketTimesByHour ?? [],
+      highlights: raw.operations?.highlights ?? EMPTY_OPERATIONS_HIGHLIGHTS,
+      questions: raw.operations?.questions ?? [],
     },
-    purchasing: raw.purchasing ?? {
-      totalPurchases: 0,
-      vendorCount: 0,
-      invoices: [],
-      costInflationPct: 0,
-      topVendors: [],
-      questions: [],
+    purchasing: {
+      totalPurchases: raw.purchasing?.totalPurchases ?? 0,
+      vendorCount: raw.purchasing?.vendorCount ?? 0,
+      invoices: raw.purchasing?.invoices ?? [],
+      costInflationPct: raw.purchasing?.costInflationPct ?? 0,
+      topVendors: raw.purchasing?.topVendors ?? [],
+      highlights: raw.purchasing?.highlights ?? EMPTY_PURCHASING_HIGHLIGHTS,
+      questions: raw.purchasing?.questions ?? [],
     },
-    forecasting: raw.forecasting ?? {
-      salesForecast7d: [],
-      laborHoursForecast7d: [],
-      inventoryRecommendations: [],
-      seasonalNote: "",
-      questions: [],
+    forecasting: {
+      salesForecast7d: raw.forecasting?.salesForecast7d ?? [],
+      laborHoursForecast7d: raw.forecasting?.laborHoursForecast7d ?? [],
+      inventoryRecommendations: raw.forecasting?.inventoryRecommendations ?? [],
+      seasonalNote: raw.forecasting?.seasonalNote ?? "",
+      highlights: raw.forecasting?.highlights ?? EMPTY_FORECASTING_HIGHLIGHTS,
+      questions: raw.forecasting?.questions ?? [],
     },
-    profitability: raw.profitability ?? {
-      grossProfit: 0,
-      netProfitEstimate: 0,
-      profitMarginPct: 0,
-      byMenuItem: [],
-      byCategory: [],
-      byDaypart: [],
-      byChannel: [],
-      byDay: [],
-      questions: [],
+    profitability: {
+      grossProfit: raw.profitability?.grossProfit ?? 0,
+      netProfitEstimate: raw.profitability?.netProfitEstimate ?? 0,
+      profitMarginPct: raw.profitability?.profitMarginPct ?? 0,
+      byMenuItem: raw.profitability?.byMenuItem ?? [],
+      byCategory: raw.profitability?.byCategory ?? [],
+      byDaypart: raw.profitability?.byDaypart ?? [],
+      byChannel: raw.profitability?.byChannel ?? [],
+      byDay: raw.profitability?.byDay ?? [],
+      highlights: raw.profitability?.highlights ?? EMPTY_PROFITABILITY_HIGHLIGHTS,
+      questions: raw.profitability?.questions ?? [],
     },
-    externalFactors: raw.externalFactors ?? {
-      factors: [],
-      patterns: [],
-      questions: [],
+    externalFactors: {
+      factors: raw.externalFactors?.factors ?? [],
+      patterns: raw.externalFactors?.patterns ?? [],
+      highlights: raw.externalFactors?.highlights ?? EMPTY_EXTERNAL_HIGHLIGHTS,
+      questions: raw.externalFactors?.questions ?? [],
     },
     aiInsights: raw.aiInsights ?? [],
     coverage: raw.coverage ?? { sections: [] },

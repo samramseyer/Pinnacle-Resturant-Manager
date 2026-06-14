@@ -354,25 +354,105 @@ export interface MarketingAnalytics {
   questions: string[];
 }
 
+export interface CustomerExperienceHighlights {
+  satisfactionHurts: Array<{ issue: string; count: number; avgRating: number }>;
+  complaintHotspots: Array<{
+    label: string;
+    type: "daypart";
+    count: number;
+    topCategory: string | null;
+  }>;
+  sentimentSummary: {
+    positive: number;
+    neutral: number;
+    negative: number;
+    overall: "positive" | "mixed" | "negative";
+  };
+}
+
 export interface CustomerExperienceAnalytics {
   avgRating: number;
   reviewCount: number;
+  starDistribution: Array<{ stars: number; count: number; pct: number }>;
   bySource: Array<{ source: string; count: number; avgRating: number }>;
+  googleReviews: {
+    count: number;
+    avgRating: number;
+    unresolved: number;
+    recent: Array<{ rating: number; comment: string | null; date: string }>;
+  };
+  openTableReviews: {
+    count: number;
+    avgRating: number;
+    unresolved: number;
+    recent: Array<{ rating: number; comment: string | null; date: string }>;
+  };
+  surveyResults: Array<{
+    category: string;
+    responses: number;
+    avgScore: number;
+    satisfiedPct: number;
+  }>;
   complaintCategories: Array<{ category: string; count: number }>;
+  resolutionTimes: {
+    avgDaysToResolve: number;
+    unresolvedAvgDays: number;
+    resolvedCount: number;
+    unresolvedCount: number;
+  };
+  sentiment: { positive: number; neutral: number; negative: number };
+  complaintsByDaypart: Array<{
+    daypart: string;
+    negativeCount: number;
+    avgRating: number;
+    topCategory: string | null;
+  }>;
   unresolvedCount: number;
-  recentReviews: Array<{ source: string; rating: number; comment: string | null; date: string }>;
+  recentReviews: Array<{ source: string; rating: number; comment: string | null; date: string; category: string | null }>;
+  highlights: CustomerExperienceHighlights;
   questions: string[];
+}
+
+export interface OperationsHighlights {
+  bottlenecks: Array<{
+    label: string;
+    type: "daypart" | "hour";
+    avgTicketMinutes: number;
+    orders: number;
+  }>;
+  ticketTimeImpact: {
+    status: "hurting" | "manageable" | "no_data";
+    reason: string;
+    slowOrderPct: number;
+    avgTicketTimeMinutes: number;
+  };
 }
 
 export interface OperationsAnalytics {
   avgTicketTimeMinutes: number;
+  avgKitchenProductionMinutes: number;
   orderAccuracyPct: number;
   voidRatePct: number;
+  voidTotal: number;
   discountRatePct: number;
+  discountTotal: number;
   compRatePct: number;
+  compTotal: number;
   refundTotal: number;
+  refundRatePct: number;
   bottleneckDaypart: string;
+  ticketTimesByDaypart: Array<{ daypart: string; avgMinutes: number; orders: number }>;
+  ticketTimesByHour: Array<{ hour: number; label: string; avgMinutes: number; orders: number }>;
+  highlights: OperationsHighlights;
   questions: string[];
+}
+
+export interface PurchasingHighlights {
+  costIncreaseSuppliers: Array<{ vendor: string; changePct: number; spend: number }>;
+  marketRateStatus: {
+    status: "above" | "at" | "below" | "unknown";
+    reason: string;
+  };
 }
 
 export interface PurchasingAnalytics {
@@ -381,7 +461,13 @@ export interface PurchasingAnalytics {
   invoices: Array<{ vendor: string; amount: number; priceChangePct: number }>;
   costInflationPct: number;
   topVendors: Array<{ vendor: string; spend: number; orders: number }>;
+  highlights: PurchasingHighlights;
   questions: string[];
+}
+
+export interface ForecastingHighlights {
+  staffNeededNextFriday: { hours: number; predictedSales: number; date: string };
+  inventoryOrderTomorrow: Array<{ name: string; quantity: number; unit: string }>;
 }
 
 export interface ForecastingAnalytics {
@@ -389,7 +475,13 @@ export interface ForecastingAnalytics {
   laborHoursForecast7d: Array<{ date: string; hours: number }>;
   inventoryRecommendations: Array<{ name: string; suggestedOrder: number; unit: string }>;
   seasonalNote: string;
+  highlights: ForecastingHighlights;
   questions: string[];
+}
+
+export interface ProfitabilityHighlights {
+  profitLeaks: Array<{ area: string; amount: number; reason: string }>;
+  marginDrivers: Array<{ name: string; type: "item" | "channel" | "daypart"; profit: number }>;
 }
 
 export interface ProfitabilityAnalytics {
@@ -401,7 +493,13 @@ export interface ProfitabilityAnalytics {
   byDaypart: Array<{ daypart: Daypart; profit: number }>;
   byChannel: Array<{ channel: string; profit: number }>;
   byDay: Array<{ date: string; profit: number }>;
+  highlights: ProfitabilityHighlights;
   questions: string[];
+}
+
+export interface ExternalFactorsHighlights {
+  weatherImpact: { avgImpactPct: number; insight: string } | null;
+  topEvents: Array<{ description: string; impactPct: number }>;
 }
 
 export interface ExternalFactorsAnalytics {
@@ -412,5 +510,6 @@ export interface ExternalFactorsAnalytics {
     impactPct: number;
   }>;
   patterns: Array<{ pattern: string; insight: string }>;
+  highlights: ExternalFactorsHighlights;
   questions: string[];
 }

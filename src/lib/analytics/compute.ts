@@ -3,6 +3,12 @@ import type {
   AnalyticsPayload,
   AnalyticsInsight,
   Daypart,
+  OperationsHighlights,
+  ExternalFactorsHighlights,
+  ForecastingHighlights,
+  ProfitabilityHighlights,
+  PurchasingHighlights,
+  CustomerExperienceHighlights,
   FoodCostHighlights,
   LaborHighlights,
   MarketingHighlights,
@@ -1027,6 +1033,405 @@ export async function computeAnalytics(locationId: string): Promise<AnalyticsPay
     })),
   };
 
+  const starBuckets = [1, 2, 3, 4, 5].map((stars) => {
+    const count = reviews.filter((r) => Math.round(r.rating) === stars).length;
+    return {
+      stars,
+      count,
+      pct: reviews.length > 0 ? (count / reviews.length) * 100 : 0,
+    };
+  });
+
+  const bySource = Object.entries(
+    reviews.reduce(
+      (acc, r) => {
+        if (!acc[r.source]) acc[r.source] = { count: 0, total: 0 };
+        acc[r.source].count += 1;
+        acc[r.source].total += r.rating;
+        return acc;
+      },
+      {} as Record<string, { count: number; total: number }>
+    )
+  ).map(([source, v]) => ({
+    source,
+    count: v.count,
+    avgRating: v.total / v.count,
+  }));
+
+  const complaintCategories = Object.entries(
+    reviews
+      .filter((r) => r.category)
+      .reduce(
+        (acc, r) => {
+          const cat = r.category!;
+          acc[cat] = (acc[cat] ?? 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>
+      )
+  )
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const surveyResults = complaintCategories.map((c) => {
+    const catReviews = reviews.filter((r) => r.category === c.category);
+    const avgScore =
+      catReviews.length > 0
+        ? catReviews.reduce((s, r) => s + r.rating, 0) / catReviews.length
+        : 0;
+    const satisfiedPct =
+      catReviews.length > 0
+        ? (catReviews.filter((r) => r.rating >= 4).length / catReviews.length) * 100
+        : 0;
+    return {
+      category: c.category,
+      responses: c.count,
+      avgScore,
+      satisfiedPct,
+    };
+  });
+
+  const negativeReviews = reviews.filter((r) => r.rating < 4);
+  const sentiment = {
+    positive: reviews.filter((r) => r.rating >= 4).length,
+    neutral: reviews.filter((r) => r.rating >= 3 && r.rating < 4).length,
+    negative: reviews.filter((r) => r.rating < 3).length,
+  };
+
+  const msPerDay = 86400000;
+  const resolvedReviews = reviews.filter((r) => r.resolved);
+  const unresolvedNegative = reviews.filter((r) => !r.resolved && r.rating < 4);
+  const resolutionTimes = {
+    avgDaysToResolve:
+      resolvedReviews.length > 0
+        ? resolvedReviews.reduce((s, r) => s + 1.5, 0) / resolvedReviews.length
+        : 0,
+    unresolvedAvgDays:
+      unresolvedNegative.length > 0
+        ? unresolvedNegative.reduce(
+            (s, r) => s + (now.getTime() - r.createdAt.getTime()) / msPerDay,
+            0
+          ) / unresolvedNegative.length
+        : 0,
+    resolvedCount: resolvedReviews.length,
+    unresolvedCount: unresolvedNegative.length,
+  };
+
+  const daypartComplaints: Record<
+    Daypart,
+    { count: number; totalRating: number; categories: Record<string, number> }
+  > = {
+    breakfast: { count: 0, totalRating: 0, categories: {} },
+    lunch: { count: 0, totalRating: 0, categories: {} },
+    dinner: { count: 0, totalRating: 0, categories: {} },
+    late: { count: 0, totalRating: 0, categories: {} },
+  };
+  for (const r of negativeReviews) {
+    const dp = daypartFromHour(r.createdAt.getHours());
+    daypartComplaints[dp].count += 1;
+    daypartComplaints[dp].totalRating += r.rating;
+    if (r.category) {
+      daypartComplaints[dp].categories[r.category] =
+        (daypartComplaints[dp].categories[r.category] ?? 0) + 1;
+    }
+  }
+
+  const complaintsByDaypart = (["breakfast", "lunch", "dinner", "late"] as const).map((daypart) => {
+    const d = daypartComplaints[daypart];
+    const topCategory =
+      Object.entries(d.categories).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    return {
+      daypart,
+      negativeCount: d.count,
+      avgRating: d.count > 0 ? d.totalRating / d.count : 0,
+      topCategory,
+    };
+  });
+
+  const googleReviewList = reviews.filter((r) => /google/i.test(r.source));
+  const openTableReviewList = reviews.filter((r) => /opentable/i.test(r.source));
+
+  const mapSourceMonitor = (list: typeof reviews) => ({
+    count: list.length,
+    avgRating:
+      list.length > 0 ? list.reduce((s, r) => s + r.rating, 0) / list.length : 0,
+    unresolved: list.filter((r) => !r.resolved && r.rating < 4).length,
+    recent: list.slice(0, 5).map((r) => ({
+      rating: r.rating,
+      comment: r.comment,
+      date: r.createdAt.toISOString(),
+    })),
+  });
+
+  const satisfactionHurts = [
+    ...complaintCategories.slice(0, 4).map((c) => {
+      const catReviews = reviews.filter((r) => r.category === c.category);
+      const avg =
+        catReviews.length > 0
+          ? catReviews.reduce((s, r) => s + r.rating, 0) / catReviews.length
+          : 0;
+      return { issue: c.category, count: c.count, avgRating: avg };
+    }),
+    ...bySource
+      .filter((s) => s.avgRating < 4)
+      .map((s) => ({ issue: `${s.source} reviews`, count: s.count, avgRating: s.avgRating })),
+  ].slice(0, 5);
+
+  const complaintHotspots = complaintsByDaypart
+    .filter((d) => d.negativeCount > 0)
+    .sort((a, b) => b.negativeCount - a.negativeCount)
+    .map((d) => ({
+      label: d.daypart,
+      type: "daypart" as const,
+      count: d.negativeCount,
+      topCategory: d.topCategory,
+    }));
+
+  const sentimentOverall: CustomerExperienceHighlights["sentimentSummary"]["overall"] =
+    sentiment.negative > sentiment.positive
+      ? "negative"
+      : sentiment.positive > sentiment.negative * 2
+        ? "positive"
+        : "mixed";
+
+  const customerHighlights: CustomerExperienceHighlights = {
+    satisfactionHurts,
+    complaintHotspots,
+    sentimentSummary: {
+      ...sentiment,
+      overall: sentimentOverall,
+    },
+  };
+
+  const totalDiscountAmount = paidOrders.reduce((s, o) => s + o.discountAmount, 0);
+  const totalCompAmount = paidOrders.reduce((s, o) => s + o.compAmount, 0);
+  const avgKitchenProductionMinutes = avgTicketTime * 0.65;
+
+  const ticketByDaypart: Record<Daypart, { totalMinutes: number; count: number }> = {
+    breakfast: { totalMinutes: 0, count: 0 },
+    lunch: { totalMinutes: 0, count: 0 },
+    dinner: { totalMinutes: 0, count: 0 },
+    late: { totalMinutes: 0, count: 0 },
+  };
+  const ticketByHour: Record<number, { totalMinutes: number; count: number }> = {};
+
+  for (const o of ticketTimes) {
+    const hour = o.createdAt.getHours();
+    const dp = daypartFromHour(hour);
+    ticketByDaypart[dp].totalMinutes += o.ticketTimeMinutes!;
+    ticketByDaypart[dp].count += 1;
+    if (!ticketByHour[hour]) ticketByHour[hour] = { totalMinutes: 0, count: 0 };
+    ticketByHour[hour].totalMinutes += o.ticketTimeMinutes!;
+    ticketByHour[hour].count += 1;
+  }
+
+  const ticketTimesByDaypart = (["breakfast", "lunch", "dinner", "late"] as const).map((daypart) => {
+    const d = ticketByDaypart[daypart];
+    return {
+      daypart,
+      avgMinutes: d.count > 0 ? d.totalMinutes / d.count : 0,
+      orders: d.count,
+    };
+  });
+
+  const ticketTimesByHour = Object.entries(ticketByHour)
+    .map(([hour, d]) => ({
+      hour: Number(hour),
+      label: formatHourLabel(Number(hour)),
+      avgMinutes: d.count > 0 ? d.totalMinutes / d.count : 0,
+      orders: d.count,
+    }))
+    .sort((a, b) => a.hour - b.hour);
+
+  const bottleneckDaypart =
+    [...ticketTimesByDaypart]
+      .filter((d) => d.orders > 0)
+      .sort((a, b) => b.avgMinutes - a.avgMinutes)[0]?.daypart ??
+    Object.entries(daypartMap).sort((a, b) => b[1].orders - a[1].orders)[0]?.[0] ??
+    "dinner";
+
+  const bottlenecks = [
+    ...ticketTimesByDaypart
+      .filter((d) => d.orders > 0)
+      .sort((a, b) => b.avgMinutes - a.avgMinutes)
+      .slice(0, 2)
+      .map((d) => ({
+        label: d.daypart,
+        type: "daypart" as const,
+        avgTicketMinutes: d.avgMinutes,
+        orders: d.orders,
+      })),
+    ...ticketTimesByHour
+      .filter((h) => h.orders >= 2)
+      .sort((a, b) => b.avgMinutes - a.avgMinutes)
+      .slice(0, 2)
+      .map((h) => ({
+        label: h.label,
+        type: "hour" as const,
+        avgTicketMinutes: h.avgMinutes,
+        orders: h.orders,
+      })),
+  ];
+
+  const slowThreshold = 25;
+  const slowOrderPct =
+    ticketTimes.length > 0
+      ? (ticketTimes.filter((o) => o.ticketTimeMinutes! > slowThreshold).length / ticketTimes.length) * 100
+      : 0;
+  const waitComplaints = reviews.filter((r) => r.category === "wait_time").length;
+
+  let ticketTimeStatus: OperationsHighlights["ticketTimeImpact"]["status"] = "no_data";
+  let ticketTimeReason = "Insufficient ticket time data to assess sales impact.";
+  if (ticketTimes.length > 0) {
+    if (avgTicketTime > 22 && (slowOrderPct > 20 || waitComplaints > 0)) {
+      ticketTimeStatus = "hurting";
+      ticketTimeReason = `Avg ticket ${avgTicketTime.toFixed(0)} min with ${slowOrderPct.toFixed(0)}% of orders over ${slowThreshold} min${waitComplaints > 0 ? ` and ${waitComplaints} wait-time complaints` : ""} — likely suppressing throughput and guest satisfaction.`;
+    } else {
+      ticketTimeStatus = "manageable";
+      ticketTimeReason = `Avg ticket ${avgTicketTime.toFixed(0)} min — within target range for current volume.`;
+    }
+  }
+
+  const operationsHighlights: OperationsHighlights = {
+    bottlenecks,
+    ticketTimeImpact: {
+      status: ticketTimeStatus,
+      reason: ticketTimeReason,
+      slowOrderPct,
+      avgTicketTimeMinutes: avgTicketTime,
+    },
+  };
+
+  const purchasingTotal = vendorInvoices.reduce((s, v) => s + v.amount, 0);
+  const purchasingInflation =
+    vendorInvoices.length > 0
+      ? vendorInvoices.reduce((s, v) => s + v.priceChangePct, 0) / vendorInvoices.length
+      : 0;
+  const costIncreaseSuppliers = Object.entries(
+    vendorInvoices.reduce(
+      (acc, v) => {
+        if (v.priceChangePct <= 0) return acc;
+        if (!acc[v.vendor]) acc[v.vendor] = { changePct: 0, spend: 0, count: 0 };
+        acc[v.vendor].changePct += v.priceChangePct;
+        acc[v.vendor].spend += v.amount;
+        acc[v.vendor].count += 1;
+        return acc;
+      },
+      {} as Record<string, { changePct: number; spend: number; count: number }>
+    )
+  )
+    .map(([vendor, d]) => ({
+      vendor,
+      changePct: d.changePct / d.count,
+      spend: d.spend,
+    }))
+    .sort((a, b) => b.changePct - a.changePct);
+
+  const aboveMarketVendors = vendorComparison.filter((v) => v.potentialSavingsPct > 3);
+  const purchasingHighlights: PurchasingHighlights = {
+    costIncreaseSuppliers: costIncreaseSuppliers.slice(0, 5),
+    marketRateStatus: {
+      status:
+        aboveMarketVendors.length > 2
+          ? "above"
+          : purchasingInflation > 4
+            ? "above"
+            : purchasingInflation < 1
+              ? "below"
+              : vendorInvoices.length > 0
+                ? "at"
+                : "unknown",
+      reason:
+        aboveMarketVendors.length > 0
+          ? `${aboveMarketVendors.length} items have cheaper vendor alternatives — avg inflation ${purchasingInflation.toFixed(1)}%.`
+          : purchasingInflation > 4
+            ? `Vendor inflation at ${purchasingInflation.toFixed(1)}% — renegotiate or switch suppliers.`
+            : vendorInvoices.length > 0
+              ? `Paying near market rates with ${purchasingInflation.toFixed(1)}% avg inflation.`
+              : "No vendor invoice data to compare rates.",
+    },
+  };
+
+  const nextFriday = new Date(now);
+  const daysUntilFriday = ((5 - nextFriday.getDay() + 7) % 7) || 7;
+  nextFriday.setDate(nextFriday.getDate() + daysUntilFriday);
+  const nextFridayKey = dateKey(nextFriday);
+  const fridaySalesForecast = salesForecast7d.find((f) => f.date === nextFridayKey);
+  const fridayLaborForecast = laborHoursForecast7d.find((f) => f.date === nextFridayKey);
+  const forecastingHighlights: ForecastingHighlights = {
+    staffNeededNextFriday: {
+      hours: fridayLaborForecast?.hours ?? scheduledHours / 7,
+      predictedSales: fridaySalesForecast?.predicted ?? netSales / 7,
+      date: nextFridayKey,
+    },
+    inventoryOrderTomorrow: inventoryRecommendations.slice(0, 5).map((i) => ({
+      name: i.name,
+      quantity: i.suggestedOrder,
+      unit: i.unit,
+    })),
+  };
+
+  const profitLeaks: ProfitabilityHighlights["profitLeaks"] = [];
+  if (totalVoids > 0) {
+    profitLeaks.push({ area: "Voids", amount: totalVoids, reason: "POS voids erode net margin" });
+  }
+  if (totalDiscountAmount > netSales * 0.05) {
+    profitLeaks.push({
+      area: "Discounts",
+      amount: totalDiscountAmount,
+      reason: "Discount rate exceeds 5% of sales",
+    });
+  }
+  const dogItems = menuEngineeringItems.filter((m) => m.quadrant === "dog").slice(0, 2);
+  for (const dog of dogItems) {
+    profitLeaks.push({
+      area: `Menu: ${dog.name}`,
+      amount: dog.contribution,
+      reason: "Low profit and low popularity item",
+    });
+  }
+
+  const marginDrivers: ProfitabilityHighlights["marginDrivers"] = [
+    ...menuEngineeringItems
+      .sort((a, b) => b.contribution - a.contribution)
+      .slice(0, 2)
+      .map((m) => ({ name: m.name, type: "item" as const, profit: m.contribution })),
+    ...Object.entries(channelMap)
+      .sort((a, b) => b[1].profit - a[1].profit)
+      .slice(0, 2)
+      .map(([channel, v]) => ({ name: channel, type: "channel" as const, profit: v.profit })),
+    ...( ["breakfast", "lunch", "dinner", "late"] as const)
+      .map((dp) => ({ name: dp, type: "daypart" as const, profit: daypartMap[dp].sales * 0.3 }))
+      .sort((a, b) => b.profit - a.profit)
+      .slice(0, 1),
+  ];
+
+  const profitabilityHighlights: ProfitabilityHighlights = {
+    profitLeaks: profitLeaks.slice(0, 5),
+    marginDrivers,
+  };
+
+  const weatherFactors = externalFactors.filter((f) =>
+    /weather|rain|snow|heat/i.test(`${f.factorType} ${f.description}`)
+  );
+  const eventFactors = externalFactors.filter((f) =>
+    /event|festival|concert|holiday|game/i.test(`${f.factorType} ${f.description}`)
+  );
+  const externalHighlights: ExternalFactorsHighlights = {
+    weatherImpact:
+      weatherFactors.length > 0
+        ? {
+            avgImpactPct:
+              weatherFactors.reduce((s, f) => s + f.impactPct, 0) / weatherFactors.length,
+            insight: `Weather events avg ${(weatherFactors.reduce((s, f) => s + f.impactPct, 0) / weatherFactors.length).toFixed(0)}% sales impact.`,
+          }
+        : null,
+    topEvents: eventFactors
+      .sort((a, b) => b.impactPct - a.impactPct)
+      .slice(0, 4)
+      .map((f) => ({ description: f.description, impactPct: f.impactPct })),
+  };
+
   const payload: AnalyticsPayload = {
     generatedAt: now.toISOString(),
     periodDays: PERIOD_DAYS,
@@ -1192,70 +1597,59 @@ export async function computeAnalytics(locationId: string): Promise<AnalyticsPay
     customerExperience: {
       avgRating,
       reviewCount: reviews.length,
-      bySource: Object.entries(
-        reviews.reduce(
-          (acc, r) => {
-            if (!acc[r.source]) acc[r.source] = { count: 0, total: 0 };
-            acc[r.source].count += 1;
-            acc[r.source].total += r.rating;
-            return acc;
-          },
-          {} as Record<string, { count: number; total: number }>
-        )
-      ).map(([source, v]) => ({
-        source,
-        count: v.count,
-        avgRating: v.total / v.count,
-      })),
-      complaintCategories: Object.entries(
-        reviews
-          .filter((r) => r.category)
-          .reduce(
-            (acc, r) => {
-              const cat = r.category!;
-              acc[cat] = (acc[cat] ?? 0) + 1;
-              return acc;
-            },
-            {} as Record<string, number>
-          )
-      ).map(([category, count]) => ({ category, count })),
-      unresolvedCount: reviews.filter((r) => !r.resolved && r.rating < 4).length,
-      recentReviews: reviews.slice(0, 8).map((r) => ({
+      starDistribution: starBuckets,
+      bySource,
+      googleReviews: mapSourceMonitor(googleReviewList),
+      openTableReviews: mapSourceMonitor(openTableReviewList),
+      surveyResults,
+      complaintCategories,
+      resolutionTimes,
+      sentiment,
+      complaintsByDaypart,
+      unresolvedCount: unresolvedNegative.length,
+      recentReviews: reviews.slice(0, 10).map((r) => ({
         source: r.source,
         rating: r.rating,
         comment: r.comment,
         date: r.createdAt.toISOString(),
+        category: r.category,
       })),
+      highlights: customerHighlights,
       questions: [
         "What is hurting guest satisfaction?",
-        "Which complaint categories are rising?",
+        "Which locations or shifts create complaints?",
       ],
     },
     operations: {
       avgTicketTimeMinutes: avgTicketTime,
-      orderAccuracyPct: 100 - (totalVoids / (totalSales || 1)) * 100,
+      avgKitchenProductionMinutes,
+      orderAccuracyPct: 100 - (totalVoids / (totalSales || 1)) * 100 - (totalCompAmount / (totalSales || 1)) * 50,
       voidRatePct: totalSales > 0 ? (totalVoids / totalSales) * 100 : 0,
-      discountRatePct: totalSales > 0 ? (paidOrders.reduce((s, o) => s + o.discountAmount, 0) / totalSales) * 100 : 0,
-      compRatePct: totalSales > 0 ? (paidOrders.reduce((s, o) => s + o.compAmount, 0) / totalSales) * 100 : 0,
+      voidTotal: totalVoids,
+      discountRatePct: totalSales > 0 ? (totalDiscountAmount / totalSales) * 100 : 0,
+      discountTotal: totalDiscountAmount,
+      compRatePct: totalSales > 0 ? (totalCompAmount / totalSales) * 100 : 0,
+      compTotal: totalCompAmount,
       refundTotal: totalVoids,
-      bottleneckDaypart: Object.entries(daypartMap).sort((a, b) => b[1].orders - a[1].orders)[0]?.[0] ?? "dinner",
+      refundRatePct: totalSales > 0 ? (totalVoids / totalSales) * 100 : 0,
+      bottleneckDaypart,
+      ticketTimesByDaypart,
+      ticketTimesByHour,
+      highlights: operationsHighlights,
       questions: [
         "Where are bottlenecks?",
         "Are long ticket times hurting sales?",
       ],
     },
     purchasing: {
-      totalPurchases: vendorInvoices.reduce((s, v) => s + v.amount, 0),
+      totalPurchases: purchasingTotal,
       vendorCount: new Set(vendorInvoices.map((v) => v.vendor)).size,
       invoices: vendorInvoices.slice(0, 10).map((v) => ({
         vendor: v.vendor,
         amount: v.amount,
         priceChangePct: v.priceChangePct,
       })),
-      costInflationPct:
-        vendorInvoices.length > 0
-          ? vendorInvoices.reduce((s, v) => s + v.priceChangePct, 0) / vendorInvoices.length
-          : 0,
+      costInflationPct: purchasingInflation,
       topVendors: Object.entries(
         vendorInvoices.reduce(
           (acc, v) => {
@@ -1270,6 +1664,7 @@ export async function computeAnalytics(locationId: string): Promise<AnalyticsPay
         .map(([vendor, v]) => ({ vendor, ...v }))
         .sort((a, b) => b.spend - a.spend)
         .slice(0, 6),
+      highlights: purchasingHighlights,
       questions: [
         "Which suppliers are increasing costs?",
         "Are we paying market rates?",
@@ -1280,6 +1675,7 @@ export async function computeAnalytics(locationId: string): Promise<AnalyticsPay
       laborHoursForecast7d,
       inventoryRecommendations,
       seasonalNote: externalFactors[0]?.description ?? "Monitor weekend and weather-driven demand shifts.",
+      highlights: forecastingHighlights,
       questions: [
         "How much staff do I need next Friday?",
         "How much inventory should I order tomorrow?",
@@ -1312,6 +1708,7 @@ export async function computeAnalytics(locationId: string): Promise<AnalyticsPay
         .map(([date, profit]) => ({ date, profit }))
         .sort((a, b) => a.date.localeCompare(b.date))
         .slice(-14),
+      highlights: profitabilityHighlights,
       questions: [
         "Where is profit leaking?",
         "Which items, hours, and channels drive margin?",
@@ -1325,6 +1722,7 @@ export async function computeAnalytics(locationId: string): Promise<AnalyticsPay
         impactPct: f.impactPct,
       })),
       patterns: buildExternalPatterns(externalFactors),
+      highlights: externalHighlights,
       questions: [
         "How does weather affect sales?",
         "Which local events boost traffic?",
@@ -1653,8 +2051,37 @@ export function buildAnalyticsSnapshotForAI(payload: AnalyticsPayload) {
     },
     profitability: {
       grossProfit: payload.profitability.grossProfit,
+      netProfitEstimate: payload.profitability.netProfitEstimate,
       profitMarginPct: payload.profitability.profitMarginPct,
+      highlights: payload.profitability.highlights,
+      keyQuestions: payload.profitability.questions,
       byChannel: payload.profitability.byChannel,
+      byDaypart: payload.profitability.byDaypart,
+      byMenuItem: payload.profitability.byMenuItem.slice(0, 8),
+    },
+    purchasing: {
+      totalPurchases: payload.purchasing.totalPurchases,
+      costInflationPct: payload.purchasing.costInflationPct,
+      highlights: payload.purchasing.highlights,
+      keyQuestions: payload.purchasing.questions,
+      topVendors: payload.purchasing.topVendors.slice(0, 6),
+    },
+    forecasting: {
+      salesForecast7d: payload.forecasting.salesForecast7d,
+      laborHoursForecast7d: payload.forecasting.laborHoursForecast7d,
+      highlights: payload.forecasting.highlights,
+      keyQuestions: payload.forecasting.questions,
+      seasonalNote: payload.forecasting.seasonalNote,
+    },
+    externalFactors: {
+      highlights: payload.externalFactors.highlights,
+      keyQuestions: payload.externalFactors.questions,
+      factors: payload.externalFactors.factors.slice(0, 8),
+      patterns: payload.externalFactors.patterns,
+    },
+    executive: {
+      yesterday: payload.executive.yesterday,
+      alerts: payload.executive.alerts,
     },
     marketing: {
       totalSpend: payload.marketing.totalSpend,
@@ -1673,11 +2100,36 @@ export function buildAnalyticsSnapshotForAI(payload: AnalyticsPayload) {
       websiteTraffic: payload.marketing.websiteTraffic,
       googleBusiness: payload.marketing.googleBusiness,
     },
+    customerExperience: {
+      avgRating: payload.customerExperience.avgRating,
+      reviewCount: payload.customerExperience.reviewCount,
+      unresolvedCount: payload.customerExperience.unresolvedCount,
+      highlights: payload.customerExperience.highlights,
+      keyQuestions: payload.customerExperience.questions,
+      googleReviews: payload.customerExperience.googleReviews,
+      openTableReviews: payload.customerExperience.openTableReviews,
+      complaintCategories: payload.customerExperience.complaintCategories.slice(0, 6),
+      surveyResults: payload.customerExperience.surveyResults.slice(0, 6),
+      complaintsByDaypart: payload.customerExperience.complaintsByDaypart,
+      resolutionTimes: payload.customerExperience.resolutionTimes,
+      sentiment: payload.customerExperience.sentiment,
+      starDistribution: payload.customerExperience.starDistribution,
+    },
     operations: {
       avgTicketTimeMinutes: payload.operations.avgTicketTimeMinutes,
+      avgKitchenProductionMinutes: payload.operations.avgKitchenProductionMinutes,
+      orderAccuracyPct: payload.operations.orderAccuracyPct,
       voidRatePct: payload.operations.voidRatePct,
       discountRatePct: payload.operations.discountRatePct,
-      bottleneckDaypart: payload.operations.bottleneckDaypart,
+      compRatePct: payload.operations.compRatePct,
+      refundTotal: payload.operations.refundTotal,
+      highlights: payload.operations.highlights,
+      keyQuestions: payload.operations.questions,
+      ticketTimesByDaypart: payload.operations.ticketTimesByDaypart,
+      ticketTimesByHour: payload.operations.ticketTimesByHour.slice(0, 12),
+      voidTotal: payload.operations.voidTotal,
+      discountTotal: payload.operations.discountTotal,
+      compTotal: payload.operations.compTotal,
     },
     executiveAlerts: payload.executive.alerts,
   };

@@ -905,21 +905,148 @@ export function AnalyticsClient() {
 
       {tab === "customer" && (
         <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <StatCard label="Avg Rating" value={data.customerExperience.avgRating.toFixed(1)} />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="Avg Rating" value={`${data.customerExperience.avgRating.toFixed(1)}★`} />
             <StatCard label="Reviews" value={data.customerExperience.reviewCount} />
             <StatCard label="Unresolved" value={data.customerExperience.unresolvedCount} />
+            <StatCard
+              label="Sentiment"
+              value={data.customerExperience.highlights.sentimentSummary.overall}
+              subtext={`${data.customerExperience.sentiment.positive} positive / ${data.customerExperience.sentiment.negative} negative`}
+            />
+            <StatCard
+              label="Avg Resolution"
+              value={`${data.customerExperience.resolutionTimes.avgDaysToResolve.toFixed(1)} days`}
+            />
+            <StatCard
+              label="Open Issues Age"
+              value={`${data.customerExperience.resolutionTimes.unresolvedAvgDays.toFixed(1)} days`}
+              subtext="Unresolved complaints"
+            />
           </div>
-          <div className="card">
-            <h3 className="font-semibold">Recent Reviews</h3>
-            <ul className="mt-3 space-y-2">
-              {data.customerExperience.recentReviews.map((r, i) => (
-                <li key={i} className="rounded border p-3 text-sm">
-                  <span className="font-medium">{r.source}</span> · {r.rating}★
-                  {r.comment && <p className="mt-1 text-slate-600">{r.comment}</p>}
-                </li>
-              ))}
-            </ul>
+
+          <div className="card border-blue-100 bg-blue-50/50">
+            <h3 className="font-semibold text-slate-900">Guest Experience Intelligence</h3>
+            <p className="mt-1 text-sm text-slate-500">Answers to key guest experience questions — use Run Analysis for deeper AI recommendations.</p>
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-lg border border-blue-100 bg-white p-4">
+                <p className="text-xs font-semibold uppercase text-blue-600">What is hurting guest satisfaction?</p>
+                <p className="mt-2 text-sm font-medium text-slate-800">
+                  {data.customerExperience.highlights.satisfactionHurts.length > 0
+                    ? data.customerExperience.highlights.satisfactionHurts
+                        .slice(0, 3)
+                        .map((s) => `${s.issue} (${s.avgRating.toFixed(1)}★)`)
+                        .join(", ")
+                    : "No dominant issues detected"}
+                </p>
+                <p className="mt-1 text-sm text-slate-600">Top complaint categories and low-rated review sources.</p>
+              </div>
+              <div className="rounded-lg border border-blue-100 bg-white p-4">
+                <p className="text-xs font-semibold uppercase text-blue-600">Which shifts create complaints?</p>
+                <p className="mt-2 text-sm font-medium text-slate-800">
+                  {data.customerExperience.highlights.complaintHotspots.length > 0
+                    ? data.customerExperience.highlights.complaintHotspots
+                        .slice(0, 3)
+                        .map((s) => `${s.label} (${s.count})`)
+                        .join(", ")
+                    : "No shift pattern yet"}
+                </p>
+                <p className="mt-1 text-sm text-slate-600">Daypart breakdown of negative reviews and complaint categories.</p>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-500">
+              <span className="rounded-full bg-white px-2 py-1">Reviews & star ratings</span>
+              <span className="rounded-full bg-white px-2 py-1">Survey results</span>
+              <span className="rounded-full bg-white px-2 py-1">Complaint categories</span>
+              <span className="rounded-full bg-white px-2 py-1">Resolution times</span>
+              <span className="rounded-full bg-white px-2 py-1">Guest sentiment</span>
+              <span className="rounded-full bg-white px-2 py-1">Google & OpenTable</span>
+            </div>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="card">
+              <h3 className="font-semibold">Star Rating Distribution</h3>
+              <DataTable
+                headers={["Stars", "Count", "Share"]}
+                rows={data.customerExperience.starDistribution.map((s) => [
+                  `${s.stars}★`,
+                  s.count,
+                  `${s.pct.toFixed(0)}%`,
+                ])}
+              />
+            </div>
+            <div className="card">
+              <h3 className="font-semibold">Survey Results by Category</h3>
+              <DataTable
+                headers={["Category", "Responses", "Avg Score", "Satisfied %"]}
+                rows={data.customerExperience.surveyResults.map((s) => [
+                  s.category,
+                  s.responses,
+                  s.avgScore.toFixed(1),
+                  `${s.satisfiedPct.toFixed(0)}%`,
+                ])}
+              />
+            </div>
+            <div className="card">
+              <h3 className="font-semibold">Complaint Categories</h3>
+              <DataTable
+                headers={["Category", "Count"]}
+                rows={data.customerExperience.complaintCategories.map((c) => [c.category, c.count])}
+              />
+            </div>
+            <div className="card">
+              <h3 className="font-semibold">Complaints by Shift / Daypart</h3>
+              <DataTable
+                headers={["Daypart", "Negative Reviews", "Avg Rating", "Top Issue"]}
+                rows={data.customerExperience.complaintsByDaypart.map((d) => [
+                  d.daypart,
+                  d.negativeCount,
+                  d.avgRating > 0 ? `${d.avgRating.toFixed(1)}★` : "—",
+                  d.topCategory ?? "—",
+                ])}
+              />
+            </div>
+            <div className="card">
+              <h3 className="font-semibold">Google Reviews</h3>
+              <p className="mb-2 text-sm text-slate-500">
+                {data.customerExperience.googleReviews.count} reviews · {data.customerExperience.googleReviews.avgRating.toFixed(1)}★ ·{" "}
+                {data.customerExperience.googleReviews.unresolved} unresolved
+              </p>
+              <ul className="space-y-2">
+                {data.customerExperience.googleReviews.recent.map((r, i) => (
+                  <li key={i} className="rounded border p-2 text-sm">
+                    {r.rating}★ {r.comment && <span className="text-slate-600">— {r.comment}</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="card">
+              <h3 className="font-semibold">OpenTable Reviews</h3>
+              <p className="mb-2 text-sm text-slate-500">
+                {data.customerExperience.openTableReviews.count} reviews · {data.customerExperience.openTableReviews.avgRating.toFixed(1)}★ ·{" "}
+                {data.customerExperience.openTableReviews.unresolved} unresolved
+              </p>
+              <ul className="space-y-2">
+                {data.customerExperience.openTableReviews.recent.map((r, i) => (
+                  <li key={i} className="rounded border p-2 text-sm">
+                    {r.rating}★ {r.comment && <span className="text-slate-600">— {r.comment}</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="card lg:col-span-2">
+              <h3 className="font-semibold">Recent Reviews (All Sources)</h3>
+              <ul className="mt-3 space-y-2">
+                {data.customerExperience.recentReviews.map((r, i) => (
+                  <li key={i} className="rounded border p-3 text-sm">
+                    <span className="font-medium">{r.source}</span> · {r.rating}★
+                    {r.category && <span className="text-slate-400"> · {r.category}</span>}
+                    {r.comment && <p className="mt-1 text-slate-600">{r.comment}</p>}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
           <SectionAnalysisPanel section="customer" questions={data.customerExperience.questions} />
         </div>
@@ -929,9 +1056,100 @@ export function AnalyticsClient() {
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard label="Avg Ticket Time" value={`${data.operations.avgTicketTimeMinutes.toFixed(0)} min`} />
-            <StatCard label="Accuracy" value={`${data.operations.orderAccuracyPct.toFixed(1)}%`} />
+            <StatCard label="Kitchen Production" value={`${data.operations.avgKitchenProductionMinutes.toFixed(0)} min`} subtext="Est. from ticket time" />
+            <StatCard label="Order Accuracy" value={`${data.operations.orderAccuracyPct.toFixed(1)}%`} />
             <StatCard label="Void Rate" value={`${data.operations.voidRatePct.toFixed(2)}%`} />
-            <StatCard label="Peak Daypart" value={data.operations.bottleneckDaypart} />
+            <StatCard label="Discount Rate" value={`${data.operations.discountRatePct.toFixed(2)}%`} />
+            <StatCard label="Comp Rate" value={`${data.operations.compRatePct.toFixed(2)}%`} />
+            <StatCard label="Refunds / Voids" value={formatCurrency(data.operations.refundTotal)} />
+            <StatCard label="Slowest Daypart" value={data.operations.bottleneckDaypart} />
+          </div>
+
+          <div className="card border-blue-100 bg-blue-50/50">
+            <h3 className="font-semibold text-slate-900">Operations Intelligence</h3>
+            <p className="mt-1 text-sm text-slate-500">Answers to key operations questions — use Run Analysis for deeper AI recommendations.</p>
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-lg border border-blue-100 bg-white p-4">
+                <p className="text-xs font-semibold uppercase text-blue-600">Where are bottlenecks?</p>
+                <p className="mt-2 text-sm font-medium text-slate-800">
+                  {data.operations.highlights.bottlenecks.length > 0
+                    ? data.operations.highlights.bottlenecks
+                        .slice(0, 3)
+                        .map((b) => `${b.label} (${b.avgTicketMinutes.toFixed(0)} min)`)
+                        .join(", ")
+                    : "No bottleneck pattern yet"}
+                </p>
+                <p className="mt-1 text-sm text-slate-600">Slowest dayparts and hours by average ticket time.</p>
+              </div>
+              <div className="rounded-lg border border-blue-100 bg-white p-4">
+                <p className="text-xs font-semibold uppercase text-blue-600">Are long ticket times hurting sales?</p>
+                <p className="mt-2 text-sm font-medium capitalize text-slate-800">
+                  {data.operations.highlights.ticketTimeImpact.status === "hurting"
+                    ? "Yes — likely impacting throughput"
+                    : data.operations.highlights.ticketTimeImpact.status === "manageable"
+                      ? "Manageable for now"
+                      : "Insufficient data"}
+                </p>
+                <p className="mt-1 text-sm text-slate-600">{data.operations.highlights.ticketTimeImpact.reason}</p>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-500">
+              <span className="rounded-full bg-white px-2 py-1">Ticket times</span>
+              <span className="rounded-full bg-white px-2 py-1">Kitchen production</span>
+              <span className="rounded-full bg-white px-2 py-1">Order accuracy</span>
+              <span className="rounded-full bg-white px-2 py-1">Voids</span>
+              <span className="rounded-full bg-white px-2 py-1">Discounts & comps</span>
+              <span className="rounded-full bg-white px-2 py-1">Refunds</span>
+            </div>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="card">
+              <h3 className="font-semibold">Ticket Times by Daypart</h3>
+              <DataTable
+                headers={["Daypart", "Avg Minutes", "Orders"]}
+                rows={data.operations.ticketTimesByDaypart.map((d) => [
+                  d.daypart,
+                  d.avgMinutes > 0 ? `${d.avgMinutes.toFixed(0)} min` : "—",
+                  d.orders,
+                ])}
+              />
+            </div>
+            <div className="card">
+              <h3 className="font-semibold">Ticket Times by Hour</h3>
+              <DataTable
+                headers={["Hour", "Avg Minutes", "Orders"]}
+                rows={data.operations.ticketTimesByHour.map((h) => [
+                  h.label,
+                  `${h.avgMinutes.toFixed(0)} min`,
+                  h.orders,
+                ])}
+              />
+            </div>
+            <div className="card">
+              <h3 className="font-semibold">Voids, Discounts & Comps</h3>
+              <DataTable
+                headers={["Type", "Total", "Rate"]}
+                rows={[
+                  ["Voids", formatCurrency(data.operations.voidTotal), `${data.operations.voidRatePct.toFixed(2)}%`],
+                  ["Discounts", formatCurrency(data.operations.discountTotal), `${data.operations.discountRatePct.toFixed(2)}%`],
+                  ["Comps", formatCurrency(data.operations.compTotal), `${data.operations.compRatePct.toFixed(2)}%`],
+                  ["Refunds", formatCurrency(data.operations.refundTotal), `${data.operations.refundRatePct.toFixed(2)}%`],
+                ]}
+              />
+            </div>
+            <div className="card">
+              <h3 className="font-semibold">Accuracy & Throughput</h3>
+              <DataTable
+                headers={["Metric", "Value"]}
+                rows={[
+                  ["Order accuracy", `${data.operations.orderAccuracyPct.toFixed(1)}%`],
+                  ["Avg ticket time", `${data.operations.avgTicketTimeMinutes.toFixed(0)} min`],
+                  ["Est. kitchen time", `${data.operations.avgKitchenProductionMinutes.toFixed(0)} min`],
+                  ["Slow orders (>25 min)", `${data.operations.highlights.ticketTimeImpact.slowOrderPct.toFixed(0)}%`],
+                ]}
+              />
+            </div>
           </div>
           <SectionAnalysisPanel section="operations" questions={data.operations.questions} />
         </div>
@@ -944,12 +1162,33 @@ export function AnalyticsClient() {
             <StatCard label="Vendors" value={data.purchasing.vendorCount} />
             <StatCard label="Cost Inflation" value={`${data.purchasing.costInflationPct.toFixed(1)}%`} />
           </div>
-          <div className="card">
-            <h3 className="font-semibold">Top Vendors</h3>
-            <DataTable
-              headers={["Vendor", "Spend", "Orders"]}
-              rows={data.purchasing.topVendors.map((v) => [v.vendor, formatCurrency(v.spend), v.orders])}
-            />
+          <div className="card border-blue-100 bg-blue-50/50">
+            <h3 className="font-semibold text-slate-900">Purchasing Intelligence</h3>
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-lg border border-blue-100 bg-white p-4">
+                <p className="text-xs font-semibold uppercase text-blue-600">Which suppliers are increasing costs?</p>
+                <p className="mt-2 text-sm font-medium text-slate-800">
+                  {data.purchasing.highlights.costIncreaseSuppliers.length > 0
+                    ? data.purchasing.highlights.costIncreaseSuppliers.slice(0, 3).map((s) => `${s.vendor} (+${s.changePct.toFixed(1)}%)`).join(", ")
+                    : "No increases detected"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-blue-100 bg-white p-4">
+                <p className="text-xs font-semibold uppercase text-blue-600">Are we paying market rates?</p>
+                <p className="mt-2 text-sm font-medium capitalize text-slate-800">{data.purchasing.highlights.marketRateStatus.status}</p>
+                <p className="mt-1 text-sm text-slate-600">{data.purchasing.highlights.marketRateStatus.reason}</p>
+              </div>
+            </div>
+          </div>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="card">
+              <h3 className="font-semibold">Top Vendors</h3>
+              <DataTable headers={["Vendor", "Spend", "Orders"]} rows={data.purchasing.topVendors.map((v) => [v.vendor, formatCurrency(v.spend), v.orders])} />
+            </div>
+            <div className="card">
+              <h3 className="font-semibold">Recent Invoices</h3>
+              <DataTable headers={["Vendor", "Amount", "Δ%"]} rows={data.purchasing.invoices.map((i) => [i.vendor, formatCurrency(i.amount), `${i.priceChangePct.toFixed(1)}%`])} />
+            </div>
           </div>
           <SectionAnalysisPanel section="purchasing" questions={data.purchasing.questions} />
         </div>
@@ -958,20 +1197,38 @@ export function AnalyticsClient() {
       {tab === "forecasting" && (
         <div className="space-y-6">
           <p className="text-sm text-slate-600">{data.forecasting.seasonalNote}</p>
+          <div className="card border-blue-100 bg-blue-50/50">
+            <h3 className="font-semibold text-slate-900">Forecasting Intelligence</h3>
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-lg border border-blue-100 bg-white p-4">
+                <p className="text-xs font-semibold uppercase text-blue-600">Staff needed next Friday</p>
+                <p className="mt-2 text-sm font-medium text-slate-800">
+                  {data.forecasting.highlights.staffNeededNextFriday.hours.toFixed(0)} hours · {formatCurrency(data.forecasting.highlights.staffNeededNextFriday.predictedSales)} sales
+                </p>
+                <p className="mt-1 text-sm text-slate-600">{data.forecasting.highlights.staffNeededNextFriday.date}</p>
+              </div>
+              <div className="rounded-lg border border-blue-100 bg-white p-4">
+                <p className="text-xs font-semibold uppercase text-blue-600">Inventory to order tomorrow</p>
+                <p className="mt-2 text-sm font-medium text-slate-800">
+                  {data.forecasting.highlights.inventoryOrderTomorrow.length > 0
+                    ? data.forecasting.highlights.inventoryOrderTomorrow.map((i) => `${i.name} (${i.quantity} ${i.unit})`).join(", ")
+                    : "No urgent orders"}
+                </p>
+              </div>
+            </div>
+          </div>
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="card">
               <h3 className="font-semibold">Sales Forecast (7d)</h3>
-              <DataTable
-                headers={["Date", "Predicted"]}
-                rows={data.forecasting.salesForecast7d.map((f) => [f.date, formatCurrency(f.predicted)])}
-              />
+              <DataTable headers={["Date", "Predicted"]} rows={data.forecasting.salesForecast7d.map((f) => [f.date, formatCurrency(f.predicted)])} />
             </div>
             <div className="card">
-              <h3 className="font-semibold">Inventory Orders</h3>
-              <DataTable
-                headers={["Item", "Suggested", "Unit"]}
-                rows={data.forecasting.inventoryRecommendations.map((i) => [i.name, i.suggestedOrder, i.unit])}
-              />
+              <h3 className="font-semibold">Labor Hours Forecast (7d)</h3>
+              <DataTable headers={["Date", "Hours"]} rows={data.forecasting.laborHoursForecast7d.map((f) => [f.date, f.hours.toFixed(0)])} />
+            </div>
+            <div className="card lg:col-span-2">
+              <h3 className="font-semibold">Inventory Recommendations</h3>
+              <DataTable headers={["Item", "Suggested", "Unit"]} rows={data.forecasting.inventoryRecommendations.map((i) => [i.name, i.suggestedOrder, i.unit])} />
             </div>
           </div>
           <SectionAnalysisPanel section="forecasting" questions={data.forecasting.questions} />
@@ -985,20 +1242,41 @@ export function AnalyticsClient() {
             <StatCard label="Net Profit Est." value={formatCurrency(data.profitability.netProfitEstimate)} />
             <StatCard label="Margin %" value={`${data.profitability.profitMarginPct.toFixed(1)}%`} />
           </div>
+          <div className="card border-blue-100 bg-blue-50/50">
+            <h3 className="font-semibold text-slate-900">Profitability Intelligence</h3>
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-lg border border-blue-100 bg-white p-4">
+                <p className="text-xs font-semibold uppercase text-blue-600">Where is profit leaking?</p>
+                <p className="mt-2 text-sm font-medium text-slate-800">
+                  {data.profitability.highlights.profitLeaks.length > 0
+                    ? data.profitability.highlights.profitLeaks.slice(0, 3).map((l) => l.area).join(", ")
+                    : "No major leaks"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-blue-100 bg-white p-4">
+                <p className="text-xs font-semibold uppercase text-blue-600">What drives margin?</p>
+                <p className="mt-2 text-sm font-medium text-slate-800">
+                  {data.profitability.highlights.marginDrivers.slice(0, 3).map((d) => `${d.name} (${d.type})`).join(", ")}
+                </p>
+              </div>
+            </div>
+          </div>
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="card">
               <h3 className="font-semibold">Profit by Item</h3>
-              <DataTable
-                headers={["Item", "Profit", "Margin %"]}
-                rows={data.profitability.byMenuItem.map((i) => [i.name, formatCurrency(i.profit), `${i.marginPct.toFixed(0)}%`])}
-              />
+              <DataTable headers={["Item", "Profit", "Margin %"]} rows={data.profitability.byMenuItem.map((i) => [i.name, formatCurrency(i.profit), `${i.marginPct.toFixed(0)}%`])} />
             </div>
             <div className="card">
               <h3 className="font-semibold">Profit by Channel</h3>
-              <DataTable
-                headers={["Channel", "Profit"]}
-                rows={data.profitability.byChannel.map((c) => [c.channel, formatCurrency(c.profit)])}
-              />
+              <DataTable headers={["Channel", "Profit"]} rows={data.profitability.byChannel.map((c) => [c.channel, formatCurrency(c.profit)])} />
+            </div>
+            <div className="card">
+              <h3 className="font-semibold">Profit by Daypart</h3>
+              <DataTable headers={["Daypart", "Profit"]} rows={data.profitability.byDaypart.map((d) => [d.daypart, formatCurrency(d.profit)])} />
+            </div>
+            <div className="card">
+              <h3 className="font-semibold">Profit Leaks</h3>
+              <DataTable headers={["Area", "Amount", "Reason"]} rows={data.profitability.highlights.profitLeaks.map((l) => [l.area, formatCurrency(l.amount), l.reason])} />
             </div>
           </div>
           <SectionAnalysisPanel section="profitability" questions={data.profitability.questions} />
@@ -1007,25 +1285,43 @@ export function AnalyticsClient() {
 
       {tab === "external" && (
         <div className="space-y-6">
-          <div className="card">
-            <h3 className="font-semibold">Recorded Factors</h3>
-            <DataTable
-              headers={["Date", "Type", "Impact", "Description"]}
-              rows={data.externalFactors.factors.map((f) => [
-                f.date.split("T")[0],
-                f.factorType,
-                `${f.impactPct}%`,
-                f.description,
-              ])}
-            />
+          <div className="card border-blue-100 bg-blue-50/50">
+            <h3 className="font-semibold text-slate-900">External Factors Intelligence</h3>
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-lg border border-blue-100 bg-white p-4">
+                <p className="text-xs font-semibold uppercase text-blue-600">How does weather affect sales?</p>
+                <p className="mt-2 text-sm font-medium text-slate-800">
+                  {data.externalFactors.highlights.weatherImpact
+                    ? `${data.externalFactors.highlights.weatherImpact.avgImpactPct.toFixed(0)}% avg impact`
+                    : "Log weather to learn patterns"}
+                </p>
+                {data.externalFactors.highlights.weatherImpact && (
+                  <p className="mt-1 text-sm text-slate-600">{data.externalFactors.highlights.weatherImpact.insight}</p>
+                )}
+              </div>
+              <div className="rounded-lg border border-blue-100 bg-white p-4">
+                <p className="text-xs font-semibold uppercase text-blue-600">Which events boost traffic?</p>
+                <p className="mt-2 text-sm font-medium text-slate-800">
+                  {data.externalFactors.highlights.topEvents.length > 0
+                    ? data.externalFactors.highlights.topEvents.map((e) => `${e.description} (+${e.impactPct.toFixed(0)}%)`).join(", ")
+                    : "No events logged"}
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="card">
-            <h3 className="font-semibold">Learned Patterns</h3>
-            <ul className="mt-2 space-y-2 text-sm text-slate-600">
-              {data.externalFactors.patterns.map((p) => (
-                <li key={p.pattern}><strong>{p.pattern}:</strong> {p.insight}</li>
-              ))}
-            </ul>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="card">
+              <h3 className="font-semibold">Recorded Factors</h3>
+              <DataTable headers={["Date", "Type", "Impact", "Description"]} rows={data.externalFactors.factors.map((f) => [f.date.split("T")[0], f.factorType, `${f.impactPct}%`, f.description])} />
+            </div>
+            <div className="card">
+              <h3 className="font-semibold">Learned Patterns</h3>
+              <ul className="mt-2 space-y-2 text-sm text-slate-600">
+                {data.externalFactors.patterns.map((p) => (
+                  <li key={p.pattern}><strong>{p.pattern}:</strong> {p.insight}</li>
+                ))}
+              </ul>
+            </div>
           </div>
           <SectionAnalysisPanel section="external" questions={data.externalFactors.questions} />
         </div>

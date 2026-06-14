@@ -366,18 +366,48 @@ function ruleBasedSectionInsights(
     }
     case "customer": {
       const cx = payload.customerExperience;
+      const h = cx.highlights;
+
+      insights.push({
+        title: "What is hurting guest satisfaction?",
+        description:
+          h.satisfactionHurts.length > 0
+            ? h.satisfactionHurts
+                .slice(0, 4)
+                .map((s) => `${s.issue} (${s.count} mentions, ${s.avgRating.toFixed(1)}★ avg)`)
+                .join("; ")
+            : `Overall ${cx.avgRating.toFixed(1)}★ — no dominant complaint category yet.`,
+        severity: cx.avgRating < 4 || h.sentimentSummary.overall === "negative" ? "HIGH" : "MEDIUM",
+        category: "CUSTOMER",
+      });
+
+      insights.push({
+        title: "Which locations or shifts create complaints?",
+        description:
+          h.complaintHotspots.length > 0
+            ? h.complaintHotspots
+                .map(
+                  (s) =>
+                    `${s.label} shift: ${s.count} negative reviews${s.topCategory ? ` (${s.topCategory})` : ""}`
+                )
+                .join("; ")
+            : "No daypart complaint pattern detected — monitor by shift as review volume grows.",
+        severity: h.complaintHotspots.some((s) => s.count >= 2) ? "HIGH" : "LOW",
+        category: "CUSTOMER",
+      });
+
       insights.push({
         title: `Guest rating ${cx.avgRating.toFixed(1)}★`,
-        description: `${cx.reviewCount} reviews, ${cx.unresolvedCount} unresolved. Monitor complaint categories and respond to negatives quickly.`,
+        description: `${cx.reviewCount} reviews · ${cx.unresolvedCount} unresolved · sentiment ${h.sentimentSummary.overall} (${h.sentimentSummary.positive}+ / ${h.sentimentSummary.neutral} neutral / ${h.sentimentSummary.negative}−). Avg resolution ${cx.resolutionTimes.avgDaysToResolve.toFixed(1)} days.`,
         severity: cx.avgRating < 4 ? "HIGH" : cx.unresolvedCount > 0 ? "MEDIUM" : "LOW",
         category: "CUSTOMER",
       });
-      const worst = cx.complaintCategories[0];
-      if (worst) {
+
+      if (cx.googleReviews.count > 0) {
         insights.push({
-          title: `Top complaint: ${worst.category}`,
-          description: `${worst.count} mentions of ${worst.category}. Address root cause in kitchen or service flow.`,
-          severity: "MEDIUM",
+          title: `Google reviews: ${cx.googleReviews.avgRating.toFixed(1)}★`,
+          description: `${cx.googleReviews.count} Google reviews, ${cx.googleReviews.unresolved} unresolved.`,
+          severity: cx.googleReviews.avgRating < 4 ? "MEDIUM" : "LOW",
           category: "CUSTOMER",
         });
       }
@@ -385,16 +415,38 @@ function ruleBasedSectionInsights(
     }
     case "operations": {
       const o = payload.operations;
+      const h = o.highlights;
+
       insights.push({
-        title: `Ticket time ${o.avgTicketTimeMinutes.toFixed(0)} min`,
-        description: `Accuracy ${o.orderAccuracyPct.toFixed(1)}%, void rate ${o.voidRatePct.toFixed(2)}%, discount rate ${o.discountRatePct.toFixed(2)}%. Bottleneck daypart: ${o.bottleneckDaypart}.`,
+        title: "Where are bottlenecks?",
+        description:
+          h.bottlenecks.length > 0
+            ? h.bottlenecks
+                .map((b) => `${b.label} (${b.avgTicketMinutes.toFixed(0)} min avg, ${b.orders} orders)`)
+                .join("; ")
+            : `Peak volume daypart is ${o.bottleneckDaypart} — monitor kitchen capacity.`,
+        severity: h.bottlenecks.some((b) => b.avgTicketMinutes > 25) ? "HIGH" : "MEDIUM",
+        category: "OPERATIONS",
+      });
+
+      insights.push({
+        title: "Are long ticket times hurting sales?",
+        description: h.ticketTimeImpact.reason,
+        severity: h.ticketTimeImpact.status === "hurting" ? "HIGH" : "MEDIUM",
+        category: "OPERATIONS",
+      });
+
+      insights.push({
+        title: `Operations snapshot`,
+        description: `Ticket ${o.avgTicketTimeMinutes.toFixed(0)} min · kitchen ~${o.avgKitchenProductionMinutes.toFixed(0)} min · accuracy ${o.orderAccuracyPct.toFixed(1)}% · voids ${o.voidRatePct.toFixed(2)}% · discounts ${o.discountRatePct.toFixed(2)}% · comps ${o.compRatePct.toFixed(2)}%.`,
         severity: o.avgTicketTimeMinutes > 20 ? "HIGH" : "MEDIUM",
         category: "OPERATIONS",
       });
+
       if (o.voidRatePct > 1) {
         insights.push({
           title: "Void rate above target",
-          description: `Voids at ${o.voidRatePct.toFixed(2)}% — audit POS entries and kitchen communication.`,
+          description: `$${o.voidTotal.toFixed(0)} in voids (${o.voidRatePct.toFixed(2)}%) — audit POS entries and kitchen communication.`,
           severity: "HIGH",
           category: "OPERATIONS",
         });
@@ -403,75 +455,111 @@ function ruleBasedSectionInsights(
     }
     case "purchasing": {
       const p = payload.purchasing;
+      const h = p.highlights;
       insights.push({
-        title: `Purchasing $${p.totalPurchases.toFixed(0)} from ${p.vendorCount} vendors`,
-        description: `Cost inflation ${p.costInflationPct.toFixed(1)}%. Negotiate with top vendors if inflation exceeds menu price increases.`,
+        title: "Which suppliers are increasing costs?",
+        description:
+          h.costIncreaseSuppliers.length > 0
+            ? h.costIncreaseSuppliers
+                .map((s) => `${s.vendor} (+${s.changePct.toFixed(1)}%, $${s.spend.toFixed(0)} spend)`)
+                .join("; ")
+            : "No supplier price increases detected in this period.",
+        severity: h.costIncreaseSuppliers.some((s) => s.changePct > 7) ? "HIGH" : "MEDIUM",
+        category: "FINANCE",
+      });
+      insights.push({
+        title: "Are we paying market rates?",
+        description: h.marketRateStatus.reason,
+        severity: h.marketRateStatus.status === "above" ? "HIGH" : "LOW",
+        category: "FINANCE",
+      });
+      insights.push({
+        title: `Purchasing $${p.totalPurchases.toFixed(0)}`,
+        description: `${p.vendorCount} vendors, ${p.costInflationPct.toFixed(1)}% avg inflation.`,
         severity: p.costInflationPct > 5 ? "HIGH" : "LOW",
         category: "FINANCE",
       });
-      const topVendor = p.topVendors[0];
-      if (topVendor) {
-        insights.push({
-          title: `Largest vendor: ${topVendor.vendor}`,
-          description: `$${topVendor.spend.toFixed(0)} across ${topVendor.orders} orders. Consolidate or re-bid if prices are rising.`,
-          severity: "MEDIUM",
-          category: "FINANCE",
-        });
-      }
       break;
     }
     case "forecasting": {
       const f = payload.forecasting;
+      const h = f.highlights;
+      insights.push({
+        title: "How much staff do I need next Friday?",
+        description: `${h.staffNeededNextFriday.hours.toFixed(0)} labor hours projected for ${h.staffNeededNextFriday.date} ($${h.staffNeededNextFriday.predictedSales.toFixed(0)} predicted sales).`,
+        severity: "MEDIUM",
+        category: "STAFFING",
+      });
+      insights.push({
+        title: "How much inventory should I order tomorrow?",
+        description:
+          h.inventoryOrderTomorrow.length > 0
+            ? h.inventoryOrderTomorrow.map((i) => `${i.name}: ${i.quantity} ${i.unit}`).join("; ")
+            : "No urgent inventory orders — stock levels are adequate.",
+        severity: h.inventoryOrderTomorrow.length > 3 ? "HIGH" : "LOW",
+        category: "INVENTORY",
+      });
       const totalForecast = f.salesForecast7d.reduce((s, d) => s + d.predicted, 0);
       insights.push({
-        title: "7-day sales outlook",
-        description: `Projected $${totalForecast.toFixed(0)} over next 7 days. ${f.seasonalNote}`,
+        title: "7-day outlook",
+        description: `Projected $${totalForecast.toFixed(0)} sales. ${f.seasonalNote}`,
         severity: "LOW",
         category: "GENERAL",
       });
-      if (f.inventoryRecommendations.length > 0) {
-        insights.push({
-          title: `${f.inventoryRecommendations.length} inventory orders suggested`,
-          description: `Order ahead for: ${f.inventoryRecommendations.map((i) => i.name).join(", ")}.`,
-          severity: "MEDIUM",
-          category: "INVENTORY",
-        });
-      }
       break;
     }
     case "profitability": {
       const pr = payload.profitability;
+      const h = pr.highlights;
+      insights.push({
+        title: "Where is profit leaking?",
+        description:
+          h.profitLeaks.length > 0
+            ? h.profitLeaks.map((l) => `${l.area}: $${l.amount.toFixed(0)} (${l.reason})`).join("; ")
+            : "No major profit leaks detected.",
+        severity: h.profitLeaks.length > 2 ? "HIGH" : "LOW",
+        category: "FINANCE",
+      });
+      insights.push({
+        title: "Which items, hours, and channels drive margin?",
+        description: h.marginDrivers
+          .map((d) => `${d.name} (${d.type}): $${d.profit.toFixed(0)}`)
+          .join("; "),
+        severity: "MEDIUM",
+        category: "FINANCE",
+      });
       insights.push({
         title: `Margin ${pr.profitMarginPct.toFixed(1)}%`,
-        description: `Gross profit $${pr.grossProfit.toFixed(0)}, net estimate $${pr.netProfitEstimate.toFixed(0)}.`,
+        description: `Gross $${pr.grossProfit.toFixed(0)}, net est. $${pr.netProfitEstimate.toFixed(0)}.`,
         severity: pr.profitMarginPct < 10 ? "HIGH" : "LOW",
         category: "FINANCE",
       });
-      const topChannel = [...pr.byChannel].sort((a, b) => b.profit - a.profit)[0];
-      if (topChannel) {
-        insights.push({
-          title: `Most profitable channel: ${topChannel.channel}`,
-          description: `$${topChannel.profit.toFixed(0)} gross profit. Shift marketing and ops focus toward high-margin channels.`,
-          severity: "MEDIUM",
-          category: "FINANCE",
-        });
-      }
       break;
     }
     case "external": {
       const ex = payload.externalFactors;
-      for (const pattern of ex.patterns.slice(0, 2)) {
+      const h = ex.highlights;
+      insights.push({
+        title: "How does weather affect sales?",
+        description: h.weatherImpact
+          ? h.weatherImpact.insight
+          : "Log weather events to learn rain/heat impact on traffic.",
+        severity: h.weatherImpact && Math.abs(h.weatherImpact.avgImpactPct) > 15 ? "MEDIUM" : "LOW",
+        category: "GENERAL",
+      });
+      insights.push({
+        title: "Which local events boost traffic?",
+        description:
+          h.topEvents.length > 0
+            ? h.topEvents.map((e) => `${e.description} (+${e.impactPct.toFixed(0)}%)`).join("; ")
+            : "No local events logged — add concerts, festivals, and holidays.",
+        severity: h.topEvents.some((e) => e.impactPct > 25) ? "MEDIUM" : "LOW",
+        category: "GENERAL",
+      });
+      for (const pattern of ex.patterns.slice(0, 1)) {
         insights.push({
           title: pattern.pattern,
           description: pattern.insight,
-          severity: "LOW",
-          category: "GENERAL",
-        });
-      }
-      if (ex.factors.length === 0) {
-        insights.push({
-          title: "Limited external data",
-          description: "Log weather, events, and holidays to improve demand forecasting and staffing decisions.",
           severity: "LOW",
           category: "GENERAL",
         });
@@ -482,12 +570,18 @@ function ruleBasedSectionInsights(
 
   const fromGlobal = payload.aiInsights.filter((i) => {
     const map: Partial<Record<AnalyticsSection, string[]>> = {
-      sales: ["SALES", "MENU"],
-      food: ["INVENTORY", "FINANCE"],
-      labor: ["STAFFING"],
-      menu: ["MENU"],
+      executive: ["EXECUTIVE", "FINANCE", "OPERATIONS", "INVENTORY", "STAFFING"],
+      sales: ["SALES", "MENU", "OPERATIONS", "FINANCE", "STAFFING"],
+      food: ["INVENTORY", "FINANCE", "MENU"],
+      labor: ["STAFFING", "FINANCE"],
+      menu: ["MENU", "FINANCE"],
+      marketing: ["FINANCE", "GENERAL", "CUSTOMER"],
       customer: ["CUSTOMER"],
-      operations: ["OPERATIONS"],
+      operations: ["OPERATIONS", "STAFFING"],
+      purchasing: ["FINANCE", "INVENTORY"],
+      forecasting: ["STAFFING", "INVENTORY", "GENERAL"],
+      profitability: ["FINANCE"],
+      external: ["GENERAL"],
     };
     const cats = map[section];
     return cats ? cats.includes(i.category) : false;
@@ -523,7 +617,7 @@ export async function generateSectionInsights(
       messages: [
         {
           role: "system",
-          content: `You are a restaurant analytics expert analyzing the "${SECTION_LABELS[section]}" section. Answer the section's key questions using only the provided data. Return JSON with an insights array (3-5 items). Each insight: title, description, category (string), severity (LOW|MEDIUM|HIGH|CRITICAL). Be specific with numbers. Include actionable recommendations.${section === "food" ? " For food & inventory you MUST include dedicated insights that answer: (1) Where is product disappearing? — use highlights.productDisappearing, wasteByReason, wasteCost, spoilageCost; (2) Which items are driving food cost increases? — use highlights.costIncreaseDrivers and topCostDrivers; (3) Are recipes being followed? — use highlights.recipeCompliance and recipeCosts. Also reference critical metrics: food cost %, theoretical vs actual variance, inventory turnover, days on hand." : ""}${section === "labor" ? " For labor you MUST include dedicated insights that answer: (1) Are we overstaffed or understaffed? — use highlights.staffingStatus and highlights.staffingReason; (2) Which shifts are inefficient? — use highlights.inefficientShifts and byShift; (3) Which employees produce the best results? — use highlights.topPerformers and byEmployee. Also reference critical metrics: labor %, sales per labor hour, guests per labor hour, overtime %, labor variance." : ""}${section === "menu" ? " For menu engineering you MUST include dedicated insights that answer: (1) What should we promote? — use highlights.promoteItems (stars and puzzles); (2) What should we reprice? — use highlights.repriceItems (plowhorses); (3) What should we remove? — use highlights.removeItems (dogs). Reference item sales volume, contribution margin, popularity %, recipe cost, and menu mix. Classify items as stars, plowhorses, puzzles, or dogs." : ""}${section === "marketing" ? " For marketing & guest acquisition you MUST include dedicated insights that answer: (1) Is marketing actually generating sales? — use highlights.salesGenerating; (2) Which channels bring profitable customers? — use highlights.profitableChannels and campaigns. Reference marketing spend, CAC, ROAS, LTV, repeat visit rate, coupon usage, email, social, website, and Google Business metrics." : ""}`,
+          content: `You are a restaurant analytics expert analyzing the "${SECTION_LABELS[section]}" section. Answer the section's key questions using only the provided data. Return JSON with an insights array (3-5 items). Each insight: title, description, category (string), severity (LOW|MEDIUM|HIGH|CRITICAL). Be specific with numbers. Include actionable recommendations.${section === "food" ? " For food & inventory you MUST include dedicated insights that answer: (1) Where is product disappearing? — use highlights.productDisappearing, wasteByReason, wasteCost, spoilageCost; (2) Which items are driving food cost increases? — use highlights.costIncreaseDrivers and topCostDrivers; (3) Are recipes being followed? — use highlights.recipeCompliance and recipeCosts. Also reference critical metrics: food cost %, theoretical vs actual variance, inventory turnover, days on hand." : ""}${section === "labor" ? " For labor you MUST include dedicated insights that answer: (1) Are we overstaffed or understaffed? — use highlights.staffingStatus and highlights.staffingReason; (2) Which shifts are inefficient? — use highlights.inefficientShifts and byShift; (3) Which employees produce the best results? — use highlights.topPerformers and byEmployee. Also reference critical metrics: labor %, sales per labor hour, guests per labor hour, overtime %, labor variance." : ""}${section === "menu" ? " For menu engineering you MUST include dedicated insights that answer: (1) What should we promote? — use highlights.promoteItems (stars and puzzles); (2) What should we reprice? — use highlights.repriceItems (plowhorses); (3) What should we remove? — use highlights.removeItems (dogs). Reference item sales volume, contribution margin, popularity %, recipe cost, and menu mix. Classify items as stars, plowhorses, puzzles, or dogs." : ""}${section === "marketing" ? " For marketing & guest acquisition you MUST include dedicated insights that answer: (1) Is marketing actually generating sales? — use highlights.salesGenerating; (2) Which channels bring profitable customers? — use highlights.profitableChannels and campaigns. Reference marketing spend, CAC, ROAS, LTV, repeat visit rate, coupon usage, email, social, website, and Google Business metrics." : ""}${section === "customer" ? " For guest experience you MUST include dedicated insights that answer: (1) What is hurting guest satisfaction? — use highlights.satisfactionHurts, complaintCategories, sentiment; (2) Which locations or shifts create complaints? — use highlights.complaintHotspots and complaintsByDaypart. Monitor Google and OpenTable reviews. Reference star ratings, survey results, resolution times, and guest sentiment." : ""}${section === "operations" ? " For operations you MUST include dedicated insights that answer: (1) Where are bottlenecks? — use highlights.bottlenecks, ticketTimesByDaypart, ticketTimesByHour; (2) Are long ticket times hurting sales? — use highlights.ticketTimeImpact. Reference ticket times, kitchen production times, order accuracy, voids, discounts, comps, and refunds." : ""}${section === "purchasing" ? " For purchasing answer: (1) Which suppliers are increasing costs? — highlights.costIncreaseSuppliers; (2) Are we paying market rates? — highlights.marketRateStatus." : ""}${section === "forecasting" ? " For forecasting answer: (1) How much staff do I need next Friday? — highlights.staffNeededNextFriday; (2) How much inventory should I order tomorrow? — highlights.inventoryOrderTomorrow." : ""}${section === "profitability" ? " For profitability answer: (1) Where is profit leaking? — highlights.profitLeaks; (2) Which items, hours, and channels drive margin? — highlights.marginDrivers." : ""}${section === "external" ? " For external factors answer: (1) How does weather affect sales? — highlights.weatherImpact; (2) Which local events boost traffic? — highlights.topEvents." : ""}`,
         },
         {
           role: "user",
