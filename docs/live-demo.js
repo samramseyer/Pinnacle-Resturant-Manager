@@ -5,10 +5,46 @@
 (function () {
   var NAV = [
     { id: "dashboard", label: "Dashboard", icon: "📊" },
-    { id: "insights", label: "Command Center", icon: "🧠" },
-    { id: "analytics", label: "Analytics", icon: "📈" },
-    { id: "orders", label: "Orders", icon: "📋" },
+    { id: "photos", label: "Photos", icon: "📷" },
+    { id: "menu", label: "Menu", icon: "🍽️" },
     { id: "inventory", label: "Inventory", icon: "📦" },
+    { id: "staff", label: "Staff", icon: "👥" },
+    { id: "tables", label: "Tables", icon: "🪑" },
+    { id: "orders", label: "Orders", icon: "📋" },
+    { id: "finances", label: "Finances", icon: "💰" },
+    { id: "analytics", label: "Analytics", icon: "📈" },
+    { id: "social", label: "Social", icon: "📱" },
+    { id: "insights", label: "Command Center", icon: "🧠" },
+  ];
+
+  var ANALYTICS_TABS = [
+    "Executive",
+    "Sales",
+    "Food & Inv.",
+    "Labor",
+    "Menu Eng.",
+    "Marketing",
+    "Guests",
+    "Operations",
+    "Purchasing",
+    "Forecasting",
+    "Profit",
+    "External",
+  ];
+
+  var ANALYTICS_TAB_DATA = [
+    { title: "Executive Summary", kpis: [{ l: "Revenue (7d)", v: "$24.8k", s: "+8% WoW" }, { l: "Net margin", v: "16.8%", s: "-1.2 pts" }, { l: "Labor %", v: "31.2%", s: "Above goal" }, { l: "Guest rating", v: "4.6", s: "Google" }], insight: "Labor and waste are the top two margin drags this week." },
+    { title: "Sales Analytics", kpis: [{ l: "Avg check", v: "$41.20", s: "+$2.10" }, { l: "Covers (7d)", v: "612", s: "+14%" }, { l: "Dine-in mix", v: "68%", s: "Stable" }, { l: "Peak hour", v: "7–9pm", s: "Fri–Sat" }], insight: "Entrées driving lift; bar sales soft on weekdays." },
+    { title: "Food Cost & Inventory", kpis: [{ l: "Food cost %", v: "28.4%", s: "On target" }, { l: "Variance", v: "1.8%", s: "Theoretical vs actual" }, { l: "Waste (7d)", v: "$420", s: "Above avg" }, { l: "Days on hand", v: "4.2", s: "Salmon low" }], insight: "Salmon and romaine are the biggest variance drivers." },
+    { title: "Labor Management", kpis: [{ l: "Labor %", v: "31.2%", s: "Above 28% goal" }, { l: "Sales / labor hr", v: "$86", s: "Target $92" }, { l: "Overtime", v: "6.2%", s: "2 staff" }, { l: "Schedule var.", v: "+4.5%", s: "vs plan" }], insight: "Friday dinner is understaffed; Tuesday lunch overstaffed." },
+    { title: "Menu Engineering", kpis: [{ l: "Stars", v: "8 items", s: "High margin + vol" }, { l: "Plowhorses", v: "5 items", s: "Reprice candidates" }, { l: "Puzzles", v: "3 items", s: "Promote" }, { l: "Dogs", v: "2 items", s: "Consider removal" }], insight: "Ribeye and truffle fries are top contributors." },
+    { title: "Marketing & Acquisition", kpis: [{ l: "Marketing spend", v: "$1,240", s: "30 days" }, { l: "ROAS", v: "4.2×", s: "Instagram best" }, { l: "CAC", v: "$18", s: "Down 12%" }, { l: "Repeat rate", v: "34%", s: "+2 pts" }], insight: "Weekend brunch promo drove 22% of new guests." },
+    { title: "Guest Experience", kpis: [{ l: "Avg rating", v: "4.6★", s: "Google" }, { l: "OpenTable", v: "4.5★", s: "142 reviews" }, { l: "Complaints (7d)", v: "3", s: "Wait time" }, { l: "Resolution", v: "4.2h", s: "Avg time" }], insight: "Wait-time complaints cluster on Saturday 7pm." },
+    { title: "Operations", kpis: [{ l: "Avg ticket time", v: "18.4 min", s: "Target 18" }, { l: "Accuracy", v: "96.2%", s: "Good" }, { l: "Void rate", v: "1.8%", s: "Normal" }, { l: "Table turns", v: "2.4", s: "Dinner avg" }], insight: "Kitchen bottleneck at grill station 6–8pm." },
+    { title: "Purchasing", kpis: [{ l: "Open POs", v: "2", s: "Sysco, US Foods" }, { l: "Price change", v: "+3.2%", s: "Produce" }, { l: "Savings opp.", v: "$180", s: "Switch vendor" }, { l: "On-time delivery", v: "94%", s: "Last 30d" }], insight: "US Foods beats Sysco on produce this week." },
+    { title: "Forecasting & Planning", kpis: [{ l: "Sat covers", v: "142", s: "+22% vs LY" }, { l: "Staff needed Fri", v: "+1 server", s: "Dinner" }, { l: "Catering (7d)", v: "18", s: "Bookings" }, { l: "Inventory order", v: "$2.1k", s: "Suggested" }], insight: "Saturday dinner peak 7–9pm — add one server." },
+    { title: "Profitability", kpis: [{ l: "Gross profit", v: "$18.2k", s: "7 days" }, { l: "Prime cost", v: "59.6%", s: "Food + labor" }, { l: "EBITDA est.", v: "$4.2k", s: "Weekly" }, { l: "Break-even", v: "82 covers", s: "/ day" }], insight: "Labor is the largest controllable profit leak." },
+    { title: "External Factors", kpis: [{ l: "Weather (Sat)", v: "Clear", s: "Patio open" }, { l: "Local events", v: "2", s: "Farmers market" }, { l: "Competitor promos", v: "1", s: "Happy hour" }, { l: "Sentiment", v: "Positive", s: "Social" }], insight: "Farmers market Saturday AM may boost lunch traffic." },
   ];
 
   var SCENARIOS = {
@@ -82,10 +118,36 @@
   var SCENARIO_KEYS = ["profit", "rush", "order", "coach", "weekend"];
 
   var state = {
-    screen: "insights",
+    screen: "dashboard",
     scenarioKey: "profit",
     analyzing: false,
+    analyticsTab: 0,
   };
+
+  function screenHeader(title, desc) {
+    return (
+      '<div class="demo-page-header">' +
+      '<h2 class="demo-screen-title">' + title + "</h2>" +
+      (desc ? '<p class="demo-screen-desc">' + desc + "</p>" : "") +
+      "</div>"
+    );
+  }
+
+  function kpiRow(kpis) {
+    return (
+      '<div class="demo-kpi-row">' +
+      kpis.map(function (k) {
+        return (
+          '<div class="demo-kpi"><label>' + k.l + "</label><strong" +
+          (k.warn ? ' class="warn"' : "") +
+          ">" + k.v + "</strong><span" +
+          (k.up ? ' class="up"' : "") +
+          ">" + k.s + "</span></div>"
+        );
+      }).join("") +
+      "</div>"
+    );
+  }
 
   function el(tag, cls, html) {
     var node = document.createElement(tag);
@@ -187,40 +249,111 @@
   function renderDashboard() {
     return (
       '<div class="demo-screen" data-screen="dashboard">' +
-      '<div class="demo-screen-title">Operations Dashboard</div>' +
-      '<div class="demo-kpi-row">' +
-      '<div class="demo-kpi"><label>Today&apos;s revenue</label><strong>$4,280</strong><span class="up">+12% vs yesterday</span></div>' +
-      '<div class="demo-kpi"><label>Open orders</label><strong>8</strong><span>3 in kitchen</span></div>' +
-      '<div class="demo-kpi"><label>Low stock</label><strong class="warn">3</strong><span>Needs reorder</span></div>' +
+      screenHeader("Dashboard", "Downtown Bistro — daily operations overview") +
+      kpiRow([
+        { l: "Weekly revenue", v: "$24,820", s: "86 orders", up: true },
+        { l: "Monthly expenses", v: "$18,450", s: "Last 30 days" },
+        { l: "Active staff", v: "14", s: "42 menu items" },
+        { l: "Photos uploaded", v: "128", s: "3 low stock alerts", warn: true },
+      ]) +
+      '<div class="demo-alert">⚠ Low stock: Salmon (8 lb), Romaine (2 cases), Brioche buns (1 case) — ' +
+      '<button type="button" class="demo-link-btn" data-goto="insights" data-scenario="order">Ask AI to draft order →</button></div>' +
+      '<div class="demo-panel"><div class="demo-panel-head">AI insights</div>' +
+      '<div class="demo-insight-item"><span class="demo-insight-sev high">High</span><strong>Labor cost above target</strong><p>31.2% labor vs 28% goal — review Friday dinner schedule.</p>' +
+      '<button type="button" class="demo-link-btn" data-goto="insights" data-scenario="profit">Open Command Center →</button></div>' +
+      '<div class="demo-insight-item"><span class="demo-insight-sev medium">Medium</span><strong>Waste trending up</strong><p>$420 waste this week — prep variance on salmon and greens.</p></div>' +
       "</div>" +
-      '<div class="demo-panel"><div class="demo-panel-head">Recent orders</div>' +
-      '<div class="demo-list-item"><span>Table 12</span><span class="badge-open">Preparing</span><span>$86.40</span></div>' +
-      '<div class="demo-list-item"><span>Bar 3</span><span class="badge-done">Served</span><span>$42.00</span></div>' +
-      '<div class="demo-list-item"><span>Takeout #104</span><span class="badge-new">New</span><span>$31.50</span></div>' +
+      '<div class="demo-panel"><div class="demo-panel-head">Recent activity</div>' +
+      '<div class="demo-list-item"><span>Order #2184 created</span><span></span><span>2m ago</span></div>' +
+      '<div class="demo-list-item"><span>Inventory count updated</span><span></span><span>1h ago</span></div>' +
+      '<div class="demo-list-item"><span>Schedule published</span><span></span><span>3h ago</span></div>' +
+      "</div></div>"
+    );
+  }
+
+  function renderPhotos() {
+    var cats = [
+      { name: "Menu Items", count: 24, color: "orange" },
+      { name: "Inventory", count: 18, color: "blue" },
+      { name: "Receipts", count: 12, color: "green" },
+      { name: "Staff", count: 8, color: "purple" },
+      { name: "Food Prep", count: 15, color: "red" },
+      { name: "Marketing", count: 9, color: "pink" },
+      { name: "Facility", count: 6, color: "slate" },
+      { name: "Maintenance", count: 4, color: "amber" },
+    ];
+    return (
+      '<div class="demo-screen" data-screen="photos">' +
+      screenHeader("Photo Library", "Capture and organize photos by category") +
+      '<div class="demo-upload-zone">📷 Drop photos or tap to upload — AI auto-tags by category</div>' +
+      '<div class="demo-photo-grid">' +
+      cats.map(function (c) {
+        return (
+          '<div class="demo-photo-cat demo-photo-cat-' + c.color + '">' +
+          "<strong>" + c.name + "</strong><span>" + c.count + " photos</span></div>"
+        );
+      }).join("") +
       "</div>" +
-      '<div class="demo-alert">⚠ Salmon below par — <button type="button" class="demo-link-btn" data-goto="insights" data-scenario="order">Ask AI to draft order →</button></div>' +
-      "</div>"
+      '<div class="demo-panel"><div class="demo-panel-head">Recent uploads</div>' +
+      '<div class="demo-photo-row"><span class="demo-photo-thumb">🥩</span><div><strong>Ribeye plating</strong><br><span>Menu · AI: Premium cut, medium-rare</span></div></div>' +
+      '<div class="demo-photo-row"><span class="demo-photo-thumb">🧾</span><div><strong>Sysco receipt</strong><br><span>Receipt · AI: $1,842 produce order</span></div></div>' +
+      "</div></div>"
+    );
+  }
+
+  function renderMenu() {
+    var items = [
+      { cat: "Mains", name: "Wood-Fired Ribeye", price: "$42", avail: true, cost: "$11.20" },
+      { cat: "Mains", name: "Pan-Seared Salmon", price: "$34", avail: true, cost: "$9.80" },
+      { cat: "Appetizers", name: "Burrata & Heirloom", price: "$16", avail: true, cost: "$4.10" },
+      { cat: "Appetizers", name: "Crispy Calamari", price: "$14", avail: false, cost: "$3.60" },
+      { cat: "Desserts", name: "Chocolate Lava Cake", price: "$12", avail: true, cost: "$2.40" },
+      { cat: "Beverages", name: "House Old Fashioned", price: "$14", avail: true, cost: "$2.80" },
+    ];
+    return (
+      '<div class="demo-screen" data-screen="menu">' +
+      screenHeader("Menu Management", "Categories, pricing, availability, and recipe costs") +
+      '<div class="demo-toolbar"><span class="demo-toolbar-pill active">All</span><span class="demo-toolbar-pill">Mains</span><span class="demo-toolbar-pill">Appetizers</span><span class="demo-toolbar-pill">Desserts</span><span class="demo-toolbar-pill">Beverages</span></div>' +
+      '<div class="demo-menu-list">' +
+      items.map(function (item) {
+        return (
+          '<div class="demo-menu-row">' +
+          '<div><span class="demo-menu-cat">' + item.cat + "</span><strong>" + item.name + "</strong></div>" +
+          '<div class="demo-menu-meta"><span>Cost ' + item.cost + "</span><strong>" + item.price + "</strong>" +
+          '<span class="' + (item.avail ? "badge-done" : "badge-open") + '">' + (item.avail ? "Available" : "86'd") + "</span></div></div>"
+        );
+      }).join("") +
+      "</div></div>"
     );
   }
 
   function renderAnalytics() {
+    var tab = ANALYTICS_TAB_DATA[state.analyticsTab] || ANALYTICS_TAB_DATA[0];
+    var tabsHtml = ANALYTICS_TABS.map(function (label, i) {
+      return (
+        '<button type="button" class="demo-analytics-tab' +
+        (state.analyticsTab === i ? " active" : "") +
+        '" data-tab="' + i + '">' + label + "</button>"
+      );
+    }).join("");
+
     return (
       '<div class="demo-screen" data-screen="analytics">' +
-      '<div class="demo-screen-title">Analytics — Executive Summary</div>' +
-      '<div class="demo-pills">' +
-      '<span class="demo-pill hot">Sales</span><span class="demo-pill hot">Food Cost</span>' +
-      '<span class="demo-pill">Labor</span><span class="demo-pill">Menu Eng.</span>' +
-      '<span class="demo-pill">Profit</span></div>' +
+      screenHeader("Analytics", "12-tab intelligence suite — click any tab") +
+      '<div class="demo-analytics-tabs" role="tablist">' + tabsHtml + "</div>" +
+      '<div class="demo-analytics-content">' +
+      '<h3 class="demo-analytics-tab-title">' + tab.title + "</h3>" +
+      kpiRow(tab.kpis.map(function (k) {
+        return { l: k.l, v: k.v, s: k.s, warn: k.v.indexOf("31.2") >= 0, up: k.s && k.s.indexOf("+") === 0 };
+      })) +
       '<div class="demo-chart-placeholder">' +
       '<div class="demo-bars">' +
-      [65, 82, 45, 90, 72, 88, 95].map(function (h, i) {
-        return '<div class="demo-bar" style="height:' + h + '%" title="Day ' + (i + 1) + '"></div>';
+      [65, 82, 45, 90, 72, 88, 95, 78].map(function (h) {
+        return '<div class="demo-bar" style="height:' + h + '%"></div>';
       }).join("") +
-      '</div><p class="demo-chart-label">7-day revenue trend</p></div>' +
-      '<div class="demo-kpi-row">' +
-      '<div class="demo-kpi"><label>Food cost %</label><strong>28.4%</strong><span class="up">On target</span></div>' +
-      '<div class="demo-kpi"><label>Labor %</label><strong class="warn">31.2%</strong><span>Above goal</span></div>' +
-      '<div class="demo-kpi"><label>Net margin</label><strong>16.8%</strong><span>-1.2 pts</span></div>' +
+      '</div><p class="demo-chart-label">Trend — ' + tab.title + "</p></div>" +
+      '<div class="demo-intel-card"><strong>AI insight</strong><p>' + tab.insight + '</p>' +
+      '<button type="button" class="demo-link-btn demo-analytics-ai-btn" data-goto="insights" data-scenario="profit">Run deeper analysis in Command Center →</button></div>' +
       "</div></div>"
     );
   }
@@ -228,7 +361,8 @@
   function renderOrders() {
     return (
       '<div class="demo-screen" data-screen="orders">' +
-      '<div class="demo-screen-title">Orders</div>' +
+      screenHeader("Orders", "Create orders, track status, and link to tables") +
+      '<div class="demo-toolbar"><button type="button" class="demo-action-btn">+ New order</button><span class="demo-toolbar-pill active">All</span><span class="demo-toolbar-pill">Open</span><span class="demo-toolbar-pill">Paid</span></div>' +
       '<div class="demo-orders">' +
       [
         { id: "#2184", table: "Table 12", status: "Preparing", total: "$86.40", items: "2× Ribeye, 1× Caesar" },
@@ -272,13 +406,15 @@
   function renderInventory() {
     return (
       '<div class="demo-screen" data-screen="inventory">' +
-      '<div class="demo-screen-title">Inventory</div>' +
+      screenHeader("Inventory", "Stock levels, par levels, waste, and vendor pricing") +
       '<div class="demo-inv-list">' +
       [
         { name: "Atlantic Salmon", qty: "8 lb", par: "40 lb", status: "red" },
         { name: "Romaine Hearts", qty: "2 cases", par: "5 cases", status: "amber" },
         { name: "Brioche Buns", qty: "1 case", par: "3 cases", status: "amber" },
         { name: "Olive Oil (EVOO)", qty: "4 gal", par: "2 gal", status: "green" },
+        { name: "Ribeye Strip", qty: "22 lb", par: "25 lb", status: "green" },
+        { name: "Heavy Cream", qty: "3 qt", par: "4 qt", status: "amber" },
       ]
         .map(function (item) {
           return (
@@ -297,6 +433,113 @@
       "</div>" +
       '<button type="button" class="demo-action-btn demo-link-btn" data-goto="insights" data-scenario="order">Ask AI for suggested order →</button>' +
       "</div>"
+    );
+  }
+
+  function renderStaff() {
+    var team = [
+      { name: "Alex Rivera", role: "Server", shift: "Fri 5–11pm", perf: "Check avg $28" },
+      { name: "Sam Chen", role: "Shift Lead", shift: "Fri 4–12am", perf: "Top performer" },
+      { name: "Jordan Lee", role: "Line Cook", shift: "Fri 3–11pm", perf: "18 min tickets" },
+      { name: "Morgan Blake", role: "Bartender", shift: "Thu–Sat", perf: "$620/night avg" },
+      { name: "Taylor Kim", role: "Host", shift: "Fri 5–10pm", perf: "4.8 guest score" },
+    ];
+    return (
+      '<div class="demo-screen" data-screen="staff">' +
+      screenHeader("Staff & Scheduling", "Team roster, roles, shifts, and performance") +
+      kpiRow([
+        { l: "Active staff", v: "14", s: "5 roles" },
+        { l: "Scheduled (wk)", v: "312 hrs", s: "vs 298 plan" },
+        { l: "Open shifts", v: "2", s: "Fri dinner", warn: true },
+        { l: "Overtime risk", v: "2 staff", s: "This week" },
+      ]) +
+      '<div class="demo-staff-list">' +
+      team.map(function (m) {
+        return (
+          '<div class="demo-staff-row"><div class="demo-staff-avatar">' + m.name.charAt(0) +
+          '</div><div><strong>' + m.name + '</strong><br><span>' + m.role + " · " + m.shift +
+          '</span></div><span class="demo-staff-perf">' + m.perf + "</span></div>"
+        );
+      }).join("") +
+      "</div>" +
+      '<button type="button" class="demo-link-btn" data-goto="insights" data-scenario="coach">Who needs coaching? Ask AI →</button>' +
+      "</div>"
+    );
+  }
+
+  function renderTables() {
+    var tables = [
+      { n: 1, seats: 2, status: "available" },
+      { n: 2, seats: 2, status: "occupied" },
+      { n: 3, seats: 4, status: "occupied" },
+      { n: 4, seats: 4, status: "reserved" },
+      { n: 5, seats: 4, status: "available" },
+      { n: 6, seats: 6, status: "occupied" },
+      { n: 7, seats: 2, status: "available" },
+      { n: 8, seats: 8, status: "reserved" },
+      { n: 9, seats: 4, status: "available" },
+      { n: 10, seats: 2, status: "occupied" },
+      { n: 11, seats: 4, status: "available" },
+      { n: 12, seats: 6, status: "occupied" },
+    ];
+    return (
+      '<div class="demo-screen" data-screen="tables">' +
+      screenHeader("Table Floor Plan", "Visual map — available, occupied, and reserved") +
+      '<div class="demo-table-legend">' +
+      '<span><i class="demo-table-dot available"></i> Available (5)</span>' +
+      '<span><i class="demo-table-dot occupied"></i> Occupied (5)</span>' +
+      '<span><i class="demo-table-dot reserved"></i> Reserved (2)</span>' +
+      "</div>" +
+      '<div class="demo-table-grid">' +
+      tables.map(function (t) {
+        return (
+          '<div class="demo-table demo-table-' + t.status + '">' +
+          "<strong>T" + t.n + "</strong><span>" + t.seats + " seats</span></div>"
+        );
+      }).join("") +
+      "</div></div>"
+    );
+  }
+
+  function renderFinances() {
+    return (
+      '<div class="demo-screen" data-screen="finances">' +
+      screenHeader("Finances", "Expenses, receipts, and P&L tracking") +
+      kpiRow([
+        { l: "Expenses (30d)", v: "$18,450", s: "Tracked" },
+        { l: "Food purchases", v: "$8,220", s: "44% of spend" },
+        { l: "Labor (payroll)", v: "$7,640", s: "41%" },
+        { l: "Receipts scanned", v: "24", s: "AI extracted" },
+      ]) +
+      '<div class="demo-upload-zone demo-upload-sm">🧾 Scan receipt — AI extracts vendor, amount, and category</div>' +
+      '<div class="demo-panel"><div class="demo-panel-head">Recent expenses</div>' +
+      '<div class="demo-list-item"><span>Sysco — Produce</span><span class="badge-open">Food</span><span>$1,842</span></div>' +
+      '<div class="demo-list-item"><span>US Foods — Protein</span><span class="badge-open">Food</span><span>$2,104</span></div>' +
+      '<div class="demo-list-item"><span>PG&amp;E — Utilities</span><span class="badge-done">Ops</span><span>$680</span></div>' +
+      '<div class="demo-list-item"><span>Local Linen Co.</span><span class="badge-done">Ops</span><span>$240</span></div>' +
+      "</div></div>"
+    );
+  }
+
+  function renderSocial() {
+    return (
+      '<div class="demo-screen" data-screen="social">' +
+      screenHeader("Social & Web", "Publish posts, manage accounts, and track website traffic") +
+      '<div class="demo-social-accounts">' +
+      '<div class="demo-social-acct connected"><strong>Instagram</strong><span>2,840 followers · Connected</span></div>' +
+      '<div class="demo-social-acct connected"><strong>Facebook</strong><span>1,120 followers · Connected</span></div>' +
+      '<div class="demo-social-acct connected"><strong>Google Business</strong><span>4.6★ · 142 reviews</span></div>' +
+      "</div>" +
+      kpiRow([
+        { l: "Scheduled posts", v: "3", s: "This week" },
+        { l: "Website visitors", v: "4,280", s: "30 days" },
+        { l: "Bounce rate", v: "38%", s: "Improving" },
+        { l: "Top referrer", v: "Google", s: "62%" },
+      ]) +
+      '<div class="demo-compose"><label>Draft post</label>' +
+      '<div class="demo-compose-box">Saturday brunch is back — reserve your patio table. 🥂 #DowntownBistro</div>' +
+      '<div class="demo-compose-actions"><button type="button" class="demo-action-btn">Schedule</button><button type="button" class="demo-toolbar-pill">Publish now</button></div>' +
+      "</div></div>"
     );
   }
 
@@ -319,16 +562,31 @@
 
     var screens =
       renderDashboard() +
-      renderInsights() +
-      renderAnalytics() +
+      renderPhotos() +
+      renderMenu() +
+      renderInventory() +
+      renderStaff() +
+      renderTables() +
       renderOrders() +
-      renderInventory();
+      renderFinances() +
+      renderAnalytics() +
+      renderSocial() +
+      renderInsights();
 
     return (
       '<div class="pinnacle-demo" id="pinnacle-live-demo">' +
-      '<nav class="demo-sidebar" aria-label="App navigation">' +
+      '<aside class="demo-sidebar">' +
+      '<div class="demo-sidebar-brand">' +
+      '<img src="./assets/logo-nav.svg" alt="Pinnacle" class="demo-sidebar-logo" width="140" height="28" />' +
+      "</div>" +
+      '<nav class="demo-sidebar-nav" aria-label="App navigation">' +
       navHtml +
       "</nav>" +
+      '<div class="demo-sidebar-footer">' +
+      '<div class="demo-user-name">Jordan Mitchell</div>' +
+      '<span class="demo-user-badge">Owner</span>' +
+      '<div class="demo-location">📍 Downtown Bistro</div>' +
+      "</div></aside>" +
       '<div class="demo-main">' +
       screens +
       "</div></div>"
@@ -418,6 +676,37 @@
     container.querySelectorAll(".demo-action-btn").forEach(function (btn) {
       btn.addEventListener("click", function (e) {
         e.stopPropagation();
+      });
+    });
+
+    container.querySelectorAll(".demo-analytics-tab").forEach(function (tab) {
+      tab.addEventListener("click", function (e) {
+        e.stopPropagation();
+        state.analyticsTab = parseInt(tab.getAttribute("data-tab"), 10) || 0;
+        refreshDemo();
+      });
+    });
+
+    container.querySelectorAll(".demo-toolbar-pill").forEach(function (pill) {
+      pill.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var parent = pill.parentElement;
+        if (parent) {
+          parent.querySelectorAll(".demo-toolbar-pill").forEach(function (p) {
+            p.classList.remove("active");
+          });
+        }
+        pill.classList.add("active");
+      });
+    });
+
+    container.querySelectorAll(".demo-table").forEach(function (table) {
+      table.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var statuses = ["available", "occupied", "reserved"];
+        var cur = table.className.match(/demo-table-(\w+)/);
+        var idx = cur ? statuses.indexOf(cur[1]) : 0;
+        table.className = "demo-table demo-table-" + statuses[(idx + 1) % statuses.length];
       });
     });
 
