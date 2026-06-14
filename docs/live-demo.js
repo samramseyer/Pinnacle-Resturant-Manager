@@ -352,27 +352,39 @@
     }, 1400);
   }
 
-  function refreshDemo() {
-    var demo = document.getElementById("pinnacle-live-demo");
-    if (!demo) return;
-    var parent = demo.parentNode;
-    var scroll = document.querySelector(".demo-main");
+  function getDemoContainer() {
+    var modal = document.getElementById("app-embed-modal");
+    if (modal && modal.classList.contains("open")) {
+      return document.getElementById("app-embed-modal-body");
+    }
+    return document.getElementById("hero-app-embed");
+  }
+
+  function mountDemo(container) {
+    if (!container) return;
+    var scroll = container.querySelector(".demo-main");
     var scrollTop = scroll ? scroll.scrollTop : 0;
-    parent.innerHTML = renderDemo();
-    var newScroll = document.querySelector(".demo-main");
+    container.innerHTML = renderDemo();
+    var newScroll = container.querySelector(".demo-main");
     if (newScroll) newScroll.scrollTop = scrollTop;
-    bindDemoEvents(parent);
+    bindDemoEvents(container);
+  }
+
+  function refreshDemo() {
+    mountDemo(getDemoContainer());
   }
 
   function bindDemoEvents(container) {
     container.querySelectorAll(".demo-nav-item").forEach(function (btn) {
-      btn.addEventListener("click", function () {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
         showScreen(btn.getAttribute("data-screen"));
       });
     });
 
     container.querySelectorAll(".demo-link-btn").forEach(function (btn) {
-      btn.addEventListener("click", function () {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
         var scenario = btn.getAttribute("data-scenario");
         runAnalysis(scenario || state.scenarioKey);
       });
@@ -381,19 +393,31 @@
     var analyzeBtn = container.querySelector(".demo-analyze-btn");
     var input = container.querySelector(".demo-cc-input");
     if (analyzeBtn) {
-      analyzeBtn.addEventListener("click", function () {
+      analyzeBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
         runAnalysis(state.scenarioKey);
       });
     }
     if (input) {
+      input.addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
       input.addEventListener("keydown", function (e) {
+        e.stopPropagation();
         if (e.key === "Enter") runAnalysis(state.scenarioKey);
       });
     }
 
     container.querySelectorAll(".demo-cc-chips .cc-chip").forEach(function (chip) {
-      chip.addEventListener("click", function () {
+      chip.addEventListener("click", function (e) {
+        e.stopPropagation();
         runAnalysis(chip.getAttribute("data-scenario"));
+      });
+    });
+
+    container.querySelectorAll(".demo-action-btn").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
       });
     });
 
@@ -407,42 +431,55 @@
     var expandBtn = document.getElementById("hero-embed-expand");
     var modal = document.getElementById("app-embed-modal");
     var modalBody = document.getElementById("app-embed-modal-body");
+    var modalBackdrop = document.getElementById("app-embed-modal-backdrop");
     var closeBtn = document.getElementById("app-embed-close");
-    var heroWrap = document.getElementById("hero-app-embed-wrap");
 
     if (!heroSlot) return;
 
-    heroSlot.innerHTML = renderDemo();
-    bindDemoEvents(heroSlot);
-
-    var demoHome = heroSlot;
+    mountDemo(heroSlot);
 
     function openModal() {
       if (!modal || !modalBody) return;
-      var demo = document.getElementById("pinnacle-live-demo");
-      if (demo) modalBody.appendChild(demo);
+      mountDemo(modalBody);
       modal.classList.add("open");
       document.body.classList.add("modal-open");
     }
 
     function closeModal() {
       if (!modal || !heroSlot) return;
-      var demo = document.getElementById("pinnacle-live-demo");
-      if (demo) heroSlot.appendChild(demo);
       modal.classList.remove("open");
       document.body.classList.remove("modal-open");
+      mountDemo(heroSlot);
     }
 
-    if (expandBtn) expandBtn.addEventListener("click", openModal);
-    if (closeBtn) closeBtn.addEventListener("click", closeModal);
-    if (modal) {
-      modal.addEventListener("click", function (e) {
-        if (e.target.closest(".app-embed-modal-panel")) return;
+    if (expandBtn) {
+      expandBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        openModal();
+      });
+    }
+    if (closeBtn) {
+      closeBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
         closeModal();
       });
     }
+    if (modalBackdrop) {
+      modalBackdrop.addEventListener("click", closeModal);
+    }
+    if (modal) {
+      modal.addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
+    }
+    var panel = modal && modal.querySelector(".app-embed-modal-panel");
+    if (panel) {
+      panel.addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
+    }
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") closeModal();
+      if (e.key === "Escape" && modal && modal.classList.contains("open")) closeModal();
     });
   }
 

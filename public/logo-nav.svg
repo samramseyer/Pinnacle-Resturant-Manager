@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40" fill="none" role="img" aria-label="Pinnacle Restaurant Manager">
+  <rect x="0" y="0" width="40" height="40" rx="10" fill="#f97316"/>
+  <text x="11" y="29" fill="#fff" font-family="system-ui,Segoe UI,sans-serif" font-size="22" font-weight="700">P</text>
+  <ellipse cx="13" cy="32" rx="5.5" ry="2.8" fill="#fff" opacity="0.9"/>
+  <rect x="18" y="27" width="2" height="6" rx="0.5" fill="#fff" opacity="0.85"/>
+  <rect x="22" y="25" width="2" height="8" rx="0.5" fill="#fff" opacity="0.85"/>
+  <rect x="26" y="23" width="2" height="10" rx="0.5" fill="#fff" opacity="0.85"/>
+  <text x="48" y="18" fill="#ffffff" font-family="system-ui,Segoe UI,sans-serif" font-size="17" font-weight="700">Pinnacle</text>
+  <text x="48" y="33" fill="#94a3b8" font-family="system-ui,Segoe UI,sans-serif" font-size="11" font-weight="500">Restaurant Manager</text>
+</svg>

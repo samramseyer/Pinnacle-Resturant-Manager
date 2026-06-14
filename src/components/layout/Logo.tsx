@@ -6,18 +6,22 @@ interface LogoProps {
   className?: string;
   href?: string;
   priority?: boolean;
+  /** White wordmark for dark headers (uses logo-nav.svg) */
+  variant?: "default" | "on-dark";
 }
 
-export function Logo({ className, href, priority = false }: LogoProps) {
+export function Logo({ className, href, priority = false, variant = "default" }: LogoProps) {
+  const isOnDark = variant === "on-dark";
   const image = (
     <Image
-      src="/logo.png"
+      src={isOnDark ? "/logo-nav.svg" : "/logo.png"}
       alt="Pinnacle Restaurant Manager"
-      width={220}
-      height={44}
+      width={isOnDark ? 200 : 220}
+      height={isOnDark ? 40 : 44}
       priority={priority}
       className={cn(
-        "h-11 w-auto max-w-full rounded-md object-contain object-left",
+        "w-auto max-w-full object-contain object-left",
+        isOnDark ? "h-8 sm:h-9" : "h-11 rounded-md object-contain object-left",
         className
       )}
     />
