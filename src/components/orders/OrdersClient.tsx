@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2, ClipboardList, ListPlus, Wallet } from "lucide-react";
+import Link from "next/link";
+import { Plus, Trash2, ClipboardList, ListPlus, Wallet, Zap } from "lucide-react";
 import type { CheckStatus, PaymentMethod } from "@prisma/client";
 import { Button, Badge, EmptyState } from "@/components/ui";
-import { Input, Select, Textarea, FormField, Modal } from "@/components/ui/form";
+import { Select } from "@/components/ui/form";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
@@ -19,25 +20,12 @@ import {
   PAYMENT_METHOD_LABELS,
 } from "@/lib/orders";
 import { PayCheckScreen, type PayableOrder } from "@/components/orders/PayCheckScreen";
-
-interface MenuItem {
-  id: string;
-  name: string;
-  price: number;
-  available: boolean;
-}
+import { OrderMenuSheet, type OrderMenuItem, type OrderMenuSubmitPayload } from "@/components/orders/OrderMenuSheet";
+import { useMenuSync } from "@/hooks/useMenuSync";
 
 interface Table {
   id: string;
   number: number;
-}
-
-interface OrderItem {
-  id: string;
-  quantity: number;
-  price: number;
-  seatNumber?: number | null;
-  menuItem: { name: string };
 }
 
 interface OrderPayment {
@@ -57,16 +45,16 @@ interface Order extends PayableOrder {
 
 const STATUSES = ["PENDING", "PREPARING", "READY", "SERVED", "PAID", "CANCELLED"];
 
-const CHANNELS = ["dine-in", "pickup", "delivery", "catering"] as const;
-
 export function OrdersClient({
   initialOrders,
-  menuItems,
+  menuItems: initialMenuItems,
   tables,
+  initialMenuRevision = 0,
 }: {
   initialOrders: Order[];
-  menuItems: MenuItem[];
+  menuItems: OrderMenuItem[];
   tables: Table[];
+  initialMenuRevision?: number;
 }) {
   const { can } = useAuth();
   const canManage = can("manage_orders");
@@ -75,47 +63,53 @@ export function OrdersClient({
   const canTakePayment = canManage || canPlace;
 
   const [orders, setOrders] = useState(initialOrders);
+  const [menuItems, setMenuItems] = useState(initialMenuItems);
+  const [menuRevision, setMenuRevision] = useState(initialMenuRevision);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    tableId: "",
-    menuItemId: "",
-    quantity: "1",
-    guestCount: "2",
-    channel: "dine-in",
-    notes: "",
-  });
-  const [addForm, setAddForm] = useState({ menuItemId: "", quantity: "1", seatNumber: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const availableMenu = menuItems.filter((m) => m.available);
+  const refreshMenu = async () => {
+    try {
+      const res = await fetch("/api/pos/config");
+      if (!res.ok) return;
+      const data = await res.json();
+      setMenuItems(data.menuItems ?? []);
+      setMenuRevision(data.menuRevision ?? 0);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  useMenuSync(menuRevision, refreshMenu, true);
+
   const activeOrder = orders.find((o) => o.id === activeOrderId) ?? null;
 
-  const handleCreate = async () => {
-    if (!form.menuItemId) {
-      setError("Select a menu item");
-      return;
-    }
-    const menuItem = menuItems.find((m) => m.id === form.menuItemId);
-    if (!menuItem) return;
-
+  const handleCreate = async (payload: OrderMenuSubmitPayload) => {
     setSaving(true);
+    setError(null);
     try {
-      const quantity = parseInt(form.quantity) || 1;
       const order = await apiPost<Order>("/api/orders", {
-        tableId: form.tableId || null,
-        totalAmount: menuItem.price * quantity,
-        guestCount: parseInt(form.guestCount) || 1,
-        channel: form.channel,
-        notes: form.notes || null,
-        items: [{ menuItemId: form.menuItemId, quantity, price: menuItem.price }],
+        tableId: payload.tableId,
+        totalAmount: payload.price * payload.quantity,
+        guestCount: payload.guestCount ?? 1,
+        channel: payload.channel ?? "dine-in",
+        notes: payload.notes ?? null,
+        items: [
+          {
+            menuItemId: payload.menuItemId,
+            quantity: payload.quantity,
+            price: payload.price,
+            modifiers: payload.modifiers,
+            modifierSummary: payload.modifierSummary,
+          },
+        ],
       });
       setOrders((prev) => [order, ...prev]);
       setCreateModalOpen(false);
-      setForm({ tableId: "", menuItemId: "", quantity: "1", guestCount: "2", channel: "dine-in", notes: "" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create order");
     } finally {
@@ -123,28 +117,22 @@ export function OrdersClient({
     }
   };
 
-  const handleAddToCheck = async () => {
-    if (!activeOrderId || !addForm.menuItemId) {
-      setError("Select a menu item");
-      return;
-    }
-    const menuItem = menuItems.find((m) => m.id === addForm.menuItemId);
-    if (!menuItem) return;
-
+  const handleAddToCheck = async (payload: OrderMenuSubmitPayload) => {
+    if (!activeOrderId) return;
     setSaving(true);
     setError(null);
     try {
-      const quantity = parseInt(addForm.quantity) || 1;
-      const seatNumber = addForm.seatNumber ? parseInt(addForm.seatNumber, 10) : undefined;
       const updated = await apiPost<Order>(`/api/orders/${activeOrderId}/items`, {
-        menuItemId: addForm.menuItemId,
-        quantity,
-        price: menuItem.price,
-        seatNumber,
+        menuItemId: payload.menuItemId,
+        quantity: payload.quantity,
+        price: payload.price,
+        seatNumber: payload.seatNumber,
+        modifiers: payload.modifiers,
+        modifierSummary: payload.modifierSummary,
+        fireToKitchen: true,
       });
       setOrders((prev) => prev.map((o) => (o.id === activeOrderId ? updated : o)));
       setAddModalOpen(false);
-      setAddForm({ menuItemId: "", quantity: "1", seatNumber: "" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add item");
     } finally {
@@ -165,7 +153,6 @@ export function OrdersClient({
 
   const openAddModal = (orderId: string) => {
     setActiveOrderId(orderId);
-    setAddForm({ menuItemId: "", quantity: "1", seatNumber: "" });
     setError(null);
     setAddModalOpen(true);
   };
@@ -188,8 +175,15 @@ export function OrdersClient({
   return (
     <>
       {canPlace && (
-        <div className="mb-6 flex justify-end">
-          <Button onClick={() => setCreateModalOpen(true)}>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-slate-500">
+            Use the button grid to build orders fast — or open{" "}
+            <Link href="/pos" className="font-medium text-orange-600 hover:underline">
+              Server POS
+            </Link>{" "}
+            for rush mode.
+          </p>
+          <Button onClick={() => { setError(null); setCreateModalOpen(true); }}>
             <Plus className="h-4 w-4" />
             New Order
           </Button>
@@ -200,7 +194,7 @@ export function OrdersClient({
         <EmptyState
           icon={<ClipboardList className="h-12 w-12" />}
           title="No orders yet"
-          description="Create an order to start tracking."
+          description="Tap New Order to pick items from the color-coded menu grid."
           action={
             canPlace ? (
               <Button onClick={() => setCreateModalOpen(true)}>New Order</Button>
@@ -251,7 +245,9 @@ export function OrdersClient({
                     {order.items.map((item) => (
                       <li key={item.id}>
                         {item.quantity}x {item.menuItem.name}
-                        {item.seatNumber ? ` (Seat ${item.seatNumber})` : ""} — {formatCurrency(item.price)}
+                        {item.seatNumber ? ` (Seat ${item.seatNumber})` : ""}
+                        {item.modifierSummary ? ` — ${item.modifierSummary}` : ""} —{" "}
+                        {formatCurrency(item.price)}
                       </li>
                     ))}
                   </ul>
@@ -291,6 +287,15 @@ export function OrdersClient({
                       Add to check
                     </Button>
                   )}
+                  {canPlace && (
+                    <Link
+                      href="/pos"
+                      className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                    >
+                      <Zap className="h-3 w-3" />
+                      POS
+                    </Link>
+                  )}
                   {canManage && (
                     <>
                       <Select
@@ -314,82 +319,30 @@ export function OrdersClient({
         </div>
       )}
 
-      <Modal open={createModalOpen} onClose={() => setCreateModalOpen(false)} title="New Order">
-        <div className="space-y-4">
-          <FormField label="Menu Item">
-            <Select value={form.menuItemId} onChange={(e) => setForm({ ...form, menuItemId: e.target.value })}>
-              <option value="">Select item...</option>
-              {availableMenu.map((m) => (
-                <option key={m.id} value={m.id}>{m.name} — {formatCurrency(m.price)}</option>
-              ))}
-            </Select>
-          </FormField>
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Quantity">
-              <Input type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
-            </FormField>
-            <FormField label="Guests">
-              <Input type="number" min="1" value={form.guestCount} onChange={(e) => setForm({ ...form, guestCount: e.target.value })} />
-            </FormField>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Table">
-              <Select value={form.tableId} onChange={(e) => setForm({ ...form, tableId: e.target.value })}>
-                <option value="">No table</option>
-                {tables.map((t) => (
-                  <option key={t.id} value={t.id}>Table {t.number}</option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField label="Channel">
-              <Select value={form.channel} onChange={(e) => setForm({ ...form, channel: e.target.value })}>
-                {CHANNELS.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </Select>
-            </FormField>
-          </div>
-          <FormField label="Notes">
-            <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
-          </FormField>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={saving}>{saving ? "Creating..." : "Create Order"}</Button>
-          </div>
-        </div>
-      </Modal>
+      <OrderMenuSheet
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        title="New order — pick items"
+        mode="create"
+        menuItems={menuItems}
+        tables={tables}
+        submitLabel="Create order"
+        saving={saving}
+        error={error}
+        onSubmit={handleCreate}
+      />
 
-      <Modal open={addModalOpen} onClose={() => setAddModalOpen(false)} title="Add to Check">
-        <div className="space-y-4">
-          <p className="text-sm text-slate-500">Add an item to an open order check.</p>
-          <FormField label="Menu Item">
-            <Select value={addForm.menuItemId} onChange={(e) => setAddForm({ ...addForm, menuItemId: e.target.value })}>
-              <option value="">Select item...</option>
-              {availableMenu.map((m) => (
-                <option key={m.id} value={m.id}>{m.name} — {formatCurrency(m.price)}</option>
-              ))}
-            </Select>
-          </FormField>
-          <FormField label="Quantity">
-            <Input type="number" min="1" value={addForm.quantity} onChange={(e) => setAddForm({ ...addForm, quantity: e.target.value })} />
-          </FormField>
-          <FormField label="Seat (optional)">
-            <Input
-              type="number"
-              min="1"
-              value={addForm.seatNumber}
-              onChange={(e) => setAddForm({ ...addForm, seatNumber: e.target.value })}
-              placeholder="For split-by-seat"
-            />
-          </FormField>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setAddModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddToCheck} disabled={saving}>{saving ? "Adding..." : "Add item"}</Button>
-          </div>
-        </div>
-      </Modal>
+      <OrderMenuSheet
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        title="Add to check"
+        mode="add"
+        menuItems={menuItems}
+        submitLabel="Add to check"
+        saving={saving}
+        error={error}
+        onSubmit={handleAddToCheck}
+      />
 
       <PayCheckScreen
         open={paymentModalOpen}

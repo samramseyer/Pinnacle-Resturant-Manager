@@ -4,6 +4,7 @@ import { getLocationIdFromRequest } from "@/lib/location";
 import { getSessionUserFromRequest } from "@/lib/auth";
 import { requirePermission, unauthorizedResponse } from "@/lib/api-auth";
 import { ORDER_INCLUDE } from "@/lib/orders";
+import { decrementMenuStock } from "@/lib/menu/stock";
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUserFromRequest(request);
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     data: {
       locationId,
       tableId: body.tableId,
-      status: "PENDING",
+      status: body.items?.length ? "PREPARING" : "PENDING",
       totalAmount: body.totalAmount || 0,
       guestCount: body.guestCount ?? 1,
       channel: body.channel || "dine-in",
@@ -37,10 +38,20 @@ export async function POST(request: NextRequest) {
       items: body.items
         ? {
             create: body.items.map(
-              (item: { menuItemId: string; quantity: number; price: number }) => ({
+              (item: {
+                menuItemId: string;
+                quantity: number;
+                price: number;
+                modifiers?: unknown;
+                modifierSummary?: string;
+              }) => ({
                 menuItemId: item.menuItemId,
                 quantity: item.quantity,
                 price: item.price,
+                modifiers: item.modifiers ? JSON.stringify(item.modifiers) : null,
+                modifierSummary: item.modifierSummary ?? null,
+                kitchenStatus: "FIRED",
+                firedAt: new Date(),
               })
             ),
           }
@@ -48,6 +59,12 @@ export async function POST(request: NextRequest) {
     },
     include: ORDER_INCLUDE,
   });
+
+  if (body.items?.length) {
+    for (const item of body.items as { menuItemId: string; quantity: number }[]) {
+      await decrementMenuStock(locationId, item.menuItemId, item.quantity || 1);
+    }
+  }
 
   await prisma.activityLog.create({
     data: {

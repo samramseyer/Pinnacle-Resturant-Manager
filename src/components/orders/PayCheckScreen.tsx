@@ -55,6 +55,7 @@ interface OrderItem {
   price: number;
   seatNumber?: number | null;
   checkId?: string | null;
+  modifierSummary?: string | null;
   menuItem: { name: string };
 }
 

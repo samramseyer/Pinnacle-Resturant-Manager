@@ -1,0 +1,48 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getLocationIdFromRequest } from "@/lib/location";
+import { requirePermission } from "@/lib/api-auth";
+import { bumpMenuRevision } from "@/lib/menu/stock";
+import { prisma } from "@/lib/prisma";
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { error } = await requirePermission(request, "manage_menu");
+  if (error) return error;
+
+  const locationId = await getLocationIdFromRequest(request);
+  const { id } = await params;
+  const body = await request.json();
+
+  const rule = await prisma.menuScheduleRule.update({
+    where: { id },
+    data: {
+      name: body.name,
+      mode: body.mode,
+      categories: body.categories,
+      daysOfWeek: body.daysOfWeek,
+      startTime: body.startTime,
+      endTime: body.endTime,
+      priceMultiplier: body.priceMultiplier,
+      active: body.active,
+      sortOrder: body.sortOrder,
+    },
+  });
+  await bumpMenuRevision(locationId);
+  return NextResponse.json(rule);
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { error } = await requirePermission(_request, "manage_menu");
+  if (error) return error;
+
+  const locationId = await getLocationIdFromRequest(_request);
+  const { id } = await params;
+  await prisma.menuScheduleRule.delete({ where: { id } });
+  await bumpMenuRevision(locationId);
+  return NextResponse.json({ ok: true });
+}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/api-auth";
 import { hasPaymentsAttached, ORDER_INCLUDE } from "@/lib/orders";
+import { decrementMenuStock } from "@/lib/menu/stock";
 
 export async function POST(
   request: NextRequest,
@@ -30,20 +31,36 @@ export async function POST(
     );
   }
 
+  const quantity = body.quantity || 1;
+  const linePrice = body.price;
+  const fireNow = body.fireToKitchen !== false;
+  const now = fireNow ? new Date() : null;
+
   await prisma.orderItem.create({
     data: {
       orderId,
       menuItemId: body.menuItemId,
-      quantity: body.quantity || 1,
-      price: body.price,
+      quantity,
+      price: linePrice,
       seatNumber: body.seatNumber ?? null,
+      modifiers: body.modifiers ? JSON.stringify(body.modifiers) : null,
+      modifierSummary: body.modifierSummary ?? null,
+      kitchenStatus: fireNow ? "FIRED" : "PENDING",
+      firedAt: now,
     },
   });
 
-  const lineTotal = (body.quantity || 1) * body.price;
+  if (fireNow) {
+    await decrementMenuStock(order.locationId, body.menuItemId, quantity);
+  }
+
+  const lineTotal = quantity * linePrice;
   const updated = await prisma.order.update({
     where: { id: orderId },
-    data: { totalAmount: order.totalAmount + lineTotal },
+    data: {
+      totalAmount: order.totalAmount + lineTotal,
+      status: fireNow && order.status === "PENDING" ? "PREPARING" : order.status,
+    },
     include: ORDER_INCLUDE,
   });
 

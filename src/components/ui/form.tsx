@@ -70,7 +70,7 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  size?: "md" | "lg" | "xl" | "full";
+  size?: "md" | "lg" | "xl" | "full" | "fullscreen";
 }
 
 const MODAL_SIZES = {
@@ -78,16 +78,31 @@ const MODAL_SIZES = {
   lg: "max-w-2xl",
   xl: "max-w-4xl",
   full: "max-w-5xl",
+  fullscreen: "max-w-6xl",
 };
 
 export function Modal({ open, onClose, title, children, size = "md" }: ModalProps) {
   if (!open) return null;
 
+  const fullscreen = size === "fullscreen";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      className={
+        fullscreen
+          ? "fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-3"
+          : "fixed inset-0 z-50 flex items-center justify-center p-4"
+      }
+    >
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className={`relative w-full ${MODAL_SIZES[size]} max-h-[92vh] overflow-y-auto rounded-xl bg-white shadow-xl`}>
-        <div className="flex items-center justify-between border-b px-6 py-4">
+      <div
+        className={
+          fullscreen
+            ? "relative flex h-[94vh] w-full flex-col rounded-t-2xl bg-white shadow-xl sm:h-[92vh] sm:max-w-6xl sm:rounded-xl"
+            : `relative w-full ${MODAL_SIZES[size]} max-h-[92vh] overflow-y-auto rounded-xl bg-white shadow-xl`
+        }
+      >
+        <div className="flex shrink-0 items-center justify-between border-b px-4 py-3 sm:px-6 sm:py-4">
           <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
           <button
             type="button"
@@ -97,7 +112,15 @@ export function Modal({ open, onClose, title, children, size = "md" }: ModalProp
             ✕
           </button>
         </div>
-        <div className="px-6 py-4">{children}</div>
+        <div
+          className={
+            fullscreen
+              ? "flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-3 sm:px-6 sm:py-4"
+              : "px-6 py-4"
+          }
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

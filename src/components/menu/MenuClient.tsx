@@ -20,7 +20,18 @@ interface MenuClientProps {
   initialItems: MenuItem[];
 }
 
-const CATEGORIES = ["Entrees", "Salads", "Pizza", "Desserts", "Beverages", "Appetizers", "Sides"];
+const CATEGORIES = [
+  "Entrees",
+  "Burgers",
+  "Salads",
+  "Pizza",
+  "Desserts",
+  "Beer",
+  "Cocktails",
+  "Beverages",
+  "Appetizers",
+  "Sides",
+];
 
 export function MenuClient({ initialItems }: MenuClientProps) {
   const [items, setItems] = useState(initialItems);

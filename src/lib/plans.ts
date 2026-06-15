@@ -26,6 +26,7 @@ const STARTER_ROUTES = [
   "/staff",
   "/tables",
   "/orders",
+  "/pos",
   "/insights",
   "/analytics",
 ];

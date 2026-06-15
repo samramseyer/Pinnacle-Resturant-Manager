@@ -308,6 +308,10 @@ model Location {
   complianceSettings   ComplianceSettings?
   incidentReports      IncidentReport[]
   shiftFeedback        ShiftFeedback[]
+  modifierGroups       ModifierGroup[]
+  posCategoryStyles    PosCategoryStyle[]
+  menuScheduleRules    MenuScheduleRule[]
+  menuRevision         Int      @default(0)
 }
 
 model PaymentProviderConnection {
@@ -358,10 +362,15 @@ model MenuItem {
   category    String
   recipeCost  Float    @default(0)
   available   Boolean  @default(true)
+  stockCount  Int?
+  eightySixedAt DateTime?
   imageUrl    String?
+  posColor    String?
+  posGridIndex Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   orderItems  OrderItem[]
+  modifierGroups ModifierGroup[]
 }
 
 model InventoryItem {
@@ -833,16 +842,20 @@ model OrderPayment {
 }
 
 model OrderItem {
-  id         String      @id @default(cuid())
-  orderId    String
-  order      Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItemId String
-  menuItem   MenuItem    @relation(fields: [menuItemId], references: [id])
-  quantity   Int         @default(1)
-  price      Float
-  seatNumber Int?
-  checkId    String?
-  check      OrderCheck? @relation(fields: [checkId], references: [id], onDelete: SetNull)
+  id              String      @id @default(cuid())
+  orderId         String
+  order           Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId      String
+  menuItem        MenuItem    @relation(fields: [menuItemId], references: [id])
+  quantity        Int         @default(1)
+  price           Float
+  seatNumber      Int?
+  checkId         String?
+  check           OrderCheck? @relation(fields: [checkId], references: [id], onDelete: SetNull)
+  modifiers       String?
+  modifierSummary String?
+  kitchenStatus   String      @default("PENDING")
+  firedAt         DateTime?
 }
 
 model Expense {
@@ -1169,4 +1182,68 @@ model ShiftFeedback {
   @@index([staffMemberId, createdAt])
   @@index([locationId, createdAt])
   @@index([shiftId])
+}
+
+model ModifierGroup {
+  id          String   @id @default(cuid())
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  categories  String?
+  menuItemId  String?
+  menuItem    MenuItem? @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  required    Boolean  @default(false)
+  minSelect   Int      @default(1)
+  maxSelect   Int      @default(1)
+  sortOrder   Int      @default(0)
+  options     ModifierOption[]
+
+  @@index([locationId, menuItemId])
+}
+
+model ModifierOption {
+  id         String        @id @default(cuid())
+  groupId    String
+  group      ModifierGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  name       String
+  priceDelta Float         @default(0)
+  sortOrder  Int           @default(0)
+  isDefault  Boolean       @default(false)
+}
+
+model PosCategoryStyle {
+  id         String   @id @default(cuid())
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  category   String
+  color      String
+  icon       String?
+
+  @@unique([locationId, category])
+}
+
+enum MenuScheduleMode {
+  SHOW_CATEGORIES
+  HIDE_CATEGORIES
+  HAPPY_HOUR
+}
+
+model MenuScheduleRule {
+  id              String           @id @default(cuid())
+  locationId      String
+  location        Location         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  name            String
+  mode            MenuScheduleMode
+  categories      String
+  daysOfWeek      String           @default("0,1,2,3,4,5,6")
+  startTime       String
+  endTime         String
+  priceMultiplier Float            @default(1)
+  active          Boolean          @default(true)
+  sortOrder       Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([locationId, active])
 }

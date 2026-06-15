@@ -22,6 +22,7 @@ export type Permission =
   | "manage_retention"
   | "manage_orders"
   | "manage_menu"
+  | "manage_boh"
   | "manage_inventory"
   | "manage_tables"
   | "manage_social"
@@ -49,6 +50,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   "manage_retention",
   "manage_orders",
   "manage_menu",
+  "manage_boh",
   "manage_inventory",
   "manage_tables",
   "manage_social",
@@ -81,6 +83,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   manage_retention: "Retention & performance feedback",
   manage_orders: "Manage orders",
   manage_menu: "Manage menu",
+  manage_boh: "BOH — 86 items & stock counts",
   manage_inventory: "Manage inventory",
   manage_tables: "Manage tables",
   manage_social: "Manage social",
@@ -103,6 +106,7 @@ export const PERMISSION_GROUPS: { label: string; permissions: Permission[] }[] =
     permissions: [
       "manage_orders",
       "manage_menu",
+      "manage_boh",
       "manage_inventory",
       "manage_tables",
       "place_orders",
@@ -136,6 +140,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     "clock_in",
     "manage_orders",
     "manage_menu",
+    "manage_boh",
     "manage_inventory",
     "manage_tables",
     "manage_social",
@@ -144,7 +149,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     "add_to_check",
   ],
   SERVER: ["place_orders", "add_to_check", "request_ewa", "view_own_schedule", "clock_in", "complete_training"],
-  KITCHEN: ["place_orders", "add_to_check", "request_ewa", "view_own_schedule", "clock_in", "complete_training"],
+  KITCHEN: ["place_orders", "add_to_check", "manage_boh", "request_ewa", "view_own_schedule", "clock_in", "complete_training"],
   HOST: ["place_orders", "add_to_check", "request_ewa", "view_own_schedule", "clock_in", "complete_training"],
 };
 
@@ -156,9 +161,11 @@ const NAV_PERMISSION_MAP: Record<string, Permission> = {
   "/staff": "edit_staff",
   "/timeclock": "clock_in",
   "/menu": "manage_menu",
+  "/boh": "manage_boh",
   "/inventory": "manage_inventory",
   "/tables": "manage_tables",
   "/orders": "place_orders",
+  "/pos": "place_orders",
 };
 
 const ROUTE_PERMISSION_MAP: Record<string, Permission> = {
@@ -180,6 +187,8 @@ const ROUTE_PERMISSION_MAP: Record<string, Permission> = {
   "/api/training/modules": "complete_training",
   "/api/compliance": "manage_compliance",
   "/api/retention": "manage_retention",
+  "/api/boh": "manage_boh",
+  "/api/pos": "place_orders",
   "/api/timeclock": "clock_in",
   "/api/shift-swaps": "view_own_schedule",
 };
@@ -192,6 +201,9 @@ function routeBase(pathname: string): string {
   if (pathname.startsWith("/api/compliance")) return "/api/compliance";
   if (pathname.startsWith("/api/retention/feedback")) return "/api/retention";
   if (pathname.startsWith("/api/retention")) return "/api/retention";
+  if (pathname.startsWith("/api/boh")) return "/api/boh";
+  if (pathname.startsWith("/api/pos/layout")) return "/api/pos";
+  if (pathname.startsWith("/api/pos")) return "/api/pos";
   if (pathname.startsWith("/api/")) {
     const parts = pathname.split("/").filter(Boolean);
     return parts.length >= 2 ? `/${parts[0]}/${parts[1]}` : pathname;

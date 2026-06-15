@@ -19,6 +19,8 @@ import {
   Clock,
   Settings,
   Shield,
+  Zap,
+  ChefHat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/constants";
@@ -43,6 +45,8 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   "share-2": Share2,
   "bar-chart-3": BarChart3,
   clock: Clock,
+  zap: Zap,
+  "chef-hat": ChefHat,
 };
 
 export function Sidebar() {
