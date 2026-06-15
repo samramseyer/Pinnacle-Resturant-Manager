@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Button, EmptyState } from "@/components/ui";
 import { Input, Select, Textarea, FormField, Modal } from "@/components/ui/form";
-import { apiPost, apiPatch, apiDelete } from "@/lib/api";
+import { apiDelete } from "@/lib/api";
 import {
   getWeekStart,
   getWeekDays,
@@ -44,6 +44,7 @@ interface Shift {
   workRole: string | null;
   notes: string | null;
   staffMember: StaffMember;
+  complianceWarnings?: { message: string; severity: string }[];
 }
 
 interface ScheduleClientProps {
@@ -69,6 +70,8 @@ export function ScheduleClient({ staff }: ScheduleClientProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copying, setCopying] = useState(false);
+  const [complianceOverride, setComplianceOverride] = useState(false);
+  const [showOverrideOption, setShowOverrideOption] = useState(false);
 
   const activeStaff = staff.filter((s) => s.active);
   const weekDays = getWeekDays(weekStart);
@@ -110,6 +113,8 @@ export function ScheduleClient({ staff }: ScheduleClientProps) {
       date: toDateKey(date),
     });
     setError(null);
+    setComplianceOverride(false);
+    setShowOverrideOption(false);
     setModalOpen(true);
   };
 
@@ -124,6 +129,8 @@ export function ScheduleClient({ staff }: ScheduleClientProps) {
       notes: shift.notes || "",
     });
     setError(null);
+    setComplianceOverride(false);
+    setShowOverrideOption(false);
     setModalOpen(true);
   };
 
@@ -146,11 +153,19 @@ export function ScheduleClient({ staff }: ScheduleClientProps) {
         endTime: form.endTime,
         workRole: form.workRole || null,
         notes: form.notes || null,
+        complianceOverride,
       };
-      if (editing) {
-        await apiPatch(`/api/schedule/${editing.id}`, payload);
-      } else {
-        await apiPost("/api/schedule", payload);
+      const url = editing ? `/api/schedule/${editing.id}` : "/api/schedule";
+      const res = await fetch(url, {
+        method: editing ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to save shift");
+        if (data.code === "MINOR_LABOR_BLOCK") setShowOverrideOption(true);
+        return;
       }
       setModalOpen(false);
       fetchShifts();
@@ -302,8 +317,14 @@ export function ScheduleClient({ staff }: ScheduleClientProps) {
                               onClick={() => openEdit(shift)}
                               className={cn(
                                 "rounded-md border px-2 py-1.5 text-left text-xs transition-opacity hover:opacity-80",
-                                roleColor(shift.workRole || member.role)
+                                roleColor(shift.workRole || member.role),
+                                shift.complianceWarnings?.some((w) => w.severity === "block") &&
+                                  "border-red-400 ring-1 ring-red-200",
+                                shift.complianceWarnings?.length &&
+                                  !shift.complianceWarnings.some((w) => w.severity === "block") &&
+                                  "border-amber-400"
                               )}
+                              title={shift.complianceWarnings?.map((w) => w.message).join(" ")}
                             >
                               <div className="font-medium">
                                 {formatShiftTime(shift.startTime, shift.endTime)}
@@ -422,6 +443,20 @@ export function ScheduleClient({ staff }: ScheduleClientProps) {
             />
           </FormField>
           {error && <p className="text-sm text-red-600">{error}</p>}
+          {showOverrideOption && (
+            <label className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              <input
+                type="checkbox"
+                checked={complianceOverride}
+                onChange={(e) => setComplianceOverride(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                Override minor labor block — document reason in shift notes. Use only when legally
+                permitted.
+              </span>
+            </label>
+          )}
           <div className="flex justify-between gap-2">
             {editing ? (
               <Button variant="danger" size="sm" onClick={handleDelete}>

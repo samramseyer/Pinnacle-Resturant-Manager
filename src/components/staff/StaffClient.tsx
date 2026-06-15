@@ -17,6 +17,7 @@ interface StaffMember {
   isTippedEmployee?: boolean;
   tipPoints?: number;
   active: boolean;
+  dateOfBirth?: string | null;
 }
 
 import { JOB_ROLES, TIPPED_JOB_ROLES } from "@/lib/payroll/job-roles";
@@ -44,6 +45,7 @@ export function StaffClient({
     isTippedEmployee: false,
     tipPoints: "1",
     active: true,
+    dateOfBirth: "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +57,7 @@ export function StaffClient({
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: "", role: "Server", email: "", phone: "", hourlyRate: "", isTippedEmployee: true, tipPoints: "1", active: true });
+    setForm({ name: "", role: "Server", email: "", phone: "", hourlyRate: "", isTippedEmployee: true, tipPoints: "1", active: true, dateOfBirth: "" });
     setError(null);
     setModalOpen(true);
   };
@@ -71,6 +73,9 @@ export function StaffClient({
       isTippedEmployee: member.isTippedEmployee ?? TIPPED_JOB_ROLES.has(member.role as never),
       tipPoints: String(member.tipPoints ?? 1),
       active: member.active,
+      dateOfBirth: member.dateOfBirth
+        ? String(member.dateOfBirth).slice(0, 10)
+        : "",
     });
     setError(null);
     setModalOpen(true);
@@ -92,6 +97,7 @@ export function StaffClient({
         isTippedEmployee: form.isTippedEmployee,
         tipPoints: parseFloat(form.tipPoints) || 1,
         active: form.active,
+        dateOfBirth: form.dateOfBirth || null,
       };
       if (editing) {
         const updated = await apiPatch<StaffMember>(`/api/staff/${editing.id}`, payload);
@@ -198,6 +204,13 @@ export function StaffClient({
               <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </FormField>
           </div>
+          <FormField label="Date of birth (for minor labor rules)">
+            <Input
+              type="date"
+              value={form.dateOfBirth}
+              onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })}
+            />
+          </FormField>
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Hourly Rate">
               <Input type="number" step="0.01" value={form.hourlyRate} onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })} />

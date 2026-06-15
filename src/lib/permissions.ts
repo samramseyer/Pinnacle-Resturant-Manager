@@ -18,6 +18,7 @@ export type Permission =
   | "manage_hiring"
   | "manage_training"
   | "complete_training"
+  | "manage_compliance"
   | "manage_orders"
   | "manage_menu"
   | "manage_inventory"
@@ -43,6 +44,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   "manage_hiring",
   "manage_training",
   "complete_training",
+  "manage_compliance",
   "manage_orders",
   "manage_menu",
   "manage_inventory",
@@ -73,6 +75,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   manage_hiring: "Manage hiring & ATS",
   manage_training: "Manage training & certifications",
   complete_training: "Complete compliance training",
+  manage_compliance: "Labor law & compliance",
   manage_orders: "Manage orders",
   manage_menu: "Manage menu",
   manage_inventory: "Manage inventory",
@@ -86,7 +89,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
 export const PERMISSION_GROUPS: { label: string; permissions: Permission[] }[] = [
   {
     label: "Administration",
-    permissions: ["manage_permissions", "edit_staff", "manage_schedule", "manage_payroll", "approve_shift_swaps", "manage_hiring", "manage_training"],
+    permissions: ["manage_permissions", "edit_staff", "manage_schedule", "manage_payroll", "approve_shift_swaps", "manage_hiring", "manage_training", "manage_compliance"],
   },
   {
     label: "Financial",
@@ -124,6 +127,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     "manage_hiring",
     "manage_training",
     "complete_training",
+    "manage_compliance",
     "view_own_schedule",
     "clock_in",
     "manage_orders",
@@ -170,6 +174,7 @@ const ROUTE_PERMISSION_MAP: Record<string, Permission> = {
   "/api/training": "manage_training",
   "/api/training/my": "complete_training",
   "/api/training/modules": "complete_training",
+  "/api/compliance": "manage_compliance",
   "/api/timeclock": "clock_in",
   "/api/shift-swaps": "view_own_schedule",
 };
@@ -177,6 +182,9 @@ const ROUTE_PERMISSION_MAP: Record<string, Permission> = {
 function routeBase(pathname: string): string {
   if (pathname.startsWith("/api/training/my")) return "/api/training/my";
   if (pathname.startsWith("/api/training/modules")) return "/api/training/modules";
+  if (pathname.startsWith("/api/compliance/audit-records")) return "/api/compliance";
+  if (pathname.startsWith("/api/compliance/incidents")) return "/api/compliance";
+  if (pathname.startsWith("/api/compliance")) return "/api/compliance";
   if (pathname.startsWith("/api/")) {
     const parts = pathname.split("/").filter(Boolean);
     return parts.length >= 2 ? `/${parts[0]}/${parts[1]}` : pathname;

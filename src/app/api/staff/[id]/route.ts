@@ -24,6 +24,11 @@ export async function PATCH(
       tipPoints: body.tipPoints,
       active: body.active,
       imageUrl: body.imageUrl,
+      dateOfBirth: body.dateOfBirth !== undefined
+        ? body.dateOfBirth
+          ? new Date(body.dateOfBirth)
+          : null
+        : undefined,
     },
   });
 

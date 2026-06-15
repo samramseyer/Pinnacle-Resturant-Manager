@@ -184,6 +184,77 @@ async function seedTrainingSample(locationId: string) {
   }
 }
 
+async function seedComplianceSample(locationId: string) {
+  const { subYears, addDays } = await import("date-fns");
+  const { getOrCreateComplianceSettings } = await import("@/lib/compliance/validate-shift");
+
+  await getOrCreateComplianceSettings(locationId);
+
+  let minor = await prisma.staffMember.findFirst({
+    where: { locationId, name: "Jordan Kim (Minor)" },
+  });
+  if (!minor) {
+    minor = await prisma.staffMember.create({
+      data: {
+        locationId,
+        name: "Jordan Kim (Minor)",
+        role: "Host",
+        email: "jordan@example.com",
+        dateOfBirth: subYears(new Date(), 17),
+        hourlyRate: 12,
+        active: true,
+      },
+    });
+  }
+
+  const shiftExists = await prisma.shift.findFirst({
+    where: { locationId, staffMemberId: minor.id, notes: "DEMO_MINOR_VIOLATION" },
+  });
+  if (!shiftExists) {
+    let day = new Date();
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(day, i);
+      const dow = d.getDay();
+      if (dow >= 0 && dow <= 4) {
+        day = d;
+        break;
+      }
+    }
+    day.setHours(12, 0, 0, 0);
+    await prisma.shift.create({
+      data: {
+        locationId,
+        staffMemberId: minor.id,
+        date: day,
+        startTime: "16:00",
+        endTime: "23:00",
+        workRole: "Host",
+        notes: "DEMO_MINOR_VIOLATION",
+      },
+    });
+  }
+
+  const incidentCount = await prisma.incidentReport.count({ where: { locationId } });
+  if (incidentCount === 0) {
+    const cook = await prisma.staffMember.findFirst({
+      where: { locationId, role: { contains: "Cook" } },
+    });
+    await prisma.incidentReport.create({
+      data: {
+        locationId,
+        incidentType: "WORKPLACE_INJURY",
+        category: "burn",
+        description: "Minor grease splash on forearm during lunch rush — treated with burn gel, returned to station.",
+        staffMemberId: cook?.id,
+        severity: "LOW",
+        oshaRecordable: false,
+        actionTaken: "First aid applied; non-recordable per OSHA guidance.",
+        reportedByName: "Demo Manager",
+      },
+    });
+  }
+}
+
 async function seedSocialAccounts(locationId: string) {
   const accounts = [
     {
@@ -254,6 +325,7 @@ export async function seedLocationData(locationId: string) {
     }
     await seedHiringSample(locationId);
     await seedTrainingSample(locationId);
+    await seedComplianceSample(locationId);
     return {
       message: "Already seeded for this location",
       locationId,
@@ -314,6 +386,7 @@ export async function seedLocationData(locationId: string) {
   await import("@/lib/analytics/seed-sample").then((m) => m.seedAnalyticsSampleData(locationId));
   await seedHiringSample(locationId);
   await seedTrainingSample(locationId);
+  await seedComplianceSample(locationId);
 
   return { message: "Seed data created successfully", locationId, alreadySeeded: false, partial: false };
 }

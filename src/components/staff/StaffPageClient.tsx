@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Calendar, Banknote, ArrowLeftRight, CalendarDays, UserPlus, GraduationCap } from "lucide-react";
+import { ComplianceClient } from "@/components/staff/ComplianceClient";
+import { Users, Calendar, Banknote, ArrowLeftRight, CalendarDays, UserPlus, GraduationCap, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { StaffClient } from "@/components/staff/StaffClient";
@@ -24,7 +25,7 @@ interface StaffMember {
   active: boolean;
 }
 
-type Tab = "team" | "schedule" | "payroll" | "my_schedule" | "swaps" | "hiring" | "training";
+type Tab = "team" | "schedule" | "payroll" | "my_schedule" | "swaps" | "hiring" | "training" | "compliance";
 
 export function StaffPageClient({ initialStaff }: { initialStaff: StaffMember[] }) {
   const { can } = useAuth();
@@ -33,6 +34,7 @@ export function StaffPageClient({ initialStaff }: { initialStaff: StaffMember[] 
   const canPayroll = can("manage_payroll");
   const canHiring = can("manage_hiring");
   const canTraining = can("manage_training") || can("complete_training");
+  const canCompliance = can("manage_compliance");
   const canOwnSchedule = can("view_own_schedule");
   const canSwaps = canOwnSchedule || can("approve_shift_swaps");
 
@@ -52,6 +54,7 @@ export function StaffPageClient({ initialStaff }: { initialStaff: StaffMember[] 
     [
       { id: "hiring" as Tab, label: "Hiring", icon: UserPlus, show: canHiring },
       { id: "training" as Tab, label: "Training", icon: GraduationCap, show: canTraining },
+      { id: "compliance" as Tab, label: "Compliance", icon: Shield, show: canCompliance },
       { id: "payroll" as Tab, label: "Payroll", icon: Banknote, show: canPayroll },
       { id: "schedule" as Tab, label: "Schedule", icon: Calendar, show: canSchedule },
       { id: "my_schedule" as Tab, label: "My schedule", icon: CalendarDays, show: canOwnSchedule && !canSchedule },
@@ -85,6 +88,8 @@ export function StaffPageClient({ initialStaff }: { initialStaff: StaffMember[] 
         <HiringClient />
       ) : tab === "training" && canTraining ? (
         <TrainingClient staff={staff} />
+      ) : tab === "compliance" && canCompliance ? (
+        <ComplianceClient staff={staff} />
       ) : tab === "payroll" && canPayroll ? (
         <PayrollClient staff={staff} />
       ) : tab === "schedule" && canSchedule ? (

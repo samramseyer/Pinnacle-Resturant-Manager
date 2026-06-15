@@ -197,6 +197,25 @@ enum CertAlertLevel {
   MISSING
 }
 
+enum IncidentType {
+  WORKPLACE_INJURY
+  GUEST_INCIDENT
+  NEAR_MISS
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IncidentStatus {
+  OPEN
+  INVESTIGATING
+  CLOSED
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -280,6 +299,8 @@ model Location {
   staffCertifications  StaffCertification[]
   trainingModules      TrainingModule[]
   trainingCompletions  TrainingCompletion[]
+  complianceSettings   ComplianceSettings?
+  incidentReports      IncidentReport[]
 }
 
 model PaymentProviderConnection {
@@ -368,6 +389,7 @@ model StaffMember {
   role       String
   email      String?
   phone      String?
+  dateOfBirth DateTime?
   hourlyRate Float    @default(0)
   isTippedEmployee Boolean @default(false)
   tipPoints  Float    @default(1)
@@ -386,6 +408,7 @@ model StaffMember {
   swapRequestsAsCounterparty ShiftSwapRequest[] @relation("SwapCounterparty")
   certifications StaffCertification[]
   trainingCompletions TrainingCompletion[]
+  incidentReports IncidentReport[]
 }
 
 model Shift {
@@ -1077,4 +1100,42 @@ model TrainingCompletion {
 
   @@index([staffMemberId, moduleId])
   @@index([locationId, expiresAt])
+}
+
+model ComplianceSettings {
+  id                       String   @id @default(cuid())
+  locationId               String   @unique
+  location                 Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  minorBlockScheduling     Boolean  @default(true)
+  minorSchoolNightEndHour  Int      @default(22)
+  minorSchoolNightDays     String   @default("0,1,2,3,4")
+  minorMaxWeeklyHoursSchool Float   @default(18)
+  minorMaxDailyHoursSchool  Float   @default(6)
+  schoolCalendarActive     Boolean  @default(true)
+  updatedAt                DateTime @updatedAt
+}
+
+model IncidentReport {
+  id              String           @id @default(cuid())
+  locationId      String
+  location        Location         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  reportedAt      DateTime         @default(now())
+  incidentType    IncidentType
+  category        String
+  description     String
+  staffMemberId   String?
+  staffMember     StaffMember?     @relation(fields: [staffMemberId], references: [id], onDelete: SetNull)
+  guestName       String?
+  severity        IncidentSeverity @default(MEDIUM)
+  oshaRecordable  Boolean          @default(false)
+  actionTaken     String?
+  witnessNotes    String?
+  status          IncidentStatus   @default(OPEN)
+  reportedByName  String?
+  closedAt        DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([locationId, reportedAt])
+  @@index([locationId, status])
 }

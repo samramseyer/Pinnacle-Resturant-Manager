@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       tipPoints: body.tipPoints ?? 1,
       active: body.active ?? true,
       imageUrl: body.imageUrl,
+      dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : null,
     },
   });
 

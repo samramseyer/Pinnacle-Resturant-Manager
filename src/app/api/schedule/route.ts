@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getLocationIdFromRequest } from "@/lib/location";
 import { getWeekStart, getWeekEnd } from "@/lib/schedule";
 import { requirePermission } from "@/lib/api-auth";
+import { enrichShiftsWithCompliance } from "@/lib/compliance/enrich-shifts";
+import { validateShiftForMinor, violationsToError } from "@/lib/compliance/validate-shift";
 
 export async function GET(request: NextRequest) {
   const { error } = await requirePermission(request, "manage_schedule");
@@ -22,13 +24,19 @@ export async function GET(request: NextRequest) {
     orderBy: [{ date: "asc" }, { startTime: "asc" }],
   });
 
+  const compliance = await enrichShiftsWithCompliance(locationId, shifts);
+
   return NextResponse.json({
     weekStart: weekStart.toISOString(),
     weekEnd: weekEnd.toISOString(),
     shifts: shifts.map((s) => ({
       ...s,
       date: s.date.toISOString(),
+      complianceWarnings: compliance[s.id]?.violations ?? [],
     })),
+    minorViolations: Object.entries(compliance).flatMap(([shiftId, data]) =>
+      data.violations.map((v) => ({ shiftId, ...v }))
+    ),
   });
 }
 
@@ -46,11 +54,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
   }
 
+  const shiftDate = new Date(body.date);
+  const { violations, blocked } = await validateShiftForMinor({
+    locationId,
+    staffMemberId: body.staffMemberId,
+    shiftDate,
+    startTime: body.startTime,
+    endTime: body.endTime,
+    complianceOverride: Boolean(body.complianceOverride),
+  });
+
+  if (blocked) {
+    return NextResponse.json(
+      { error: violationsToError(violations), violations, code: "MINOR_LABOR_BLOCK" },
+      { status: 422 }
+    );
+  }
+
   const shift = await prisma.shift.create({
     data: {
       locationId,
       staffMemberId: body.staffMemberId,
-      date: new Date(body.date),
+      date: shiftDate,
       startTime: body.startTime,
       endTime: body.endTime,
       workRole: body.workRole || null,
@@ -65,9 +90,15 @@ export async function POST(request: NextRequest) {
       action: "CREATE",
       entity: "shift",
       entityId: shift.id,
-      details: `Scheduled ${staff.name}: ${body.startTime}–${body.endTime}`,
+      details: `Scheduled ${staff.name}: ${body.startTime}–${body.endTime}${
+        violations.length ? ` (compliance warning: ${violationsToError(violations)})` : ""
+      }`,
     },
   });
 
-  return NextResponse.json({ ...shift, date: shift.date.toISOString() });
+  return NextResponse.json({
+    ...shift,
+    date: shift.date.toISOString(),
+    complianceWarnings: violations,
+  });
 }
