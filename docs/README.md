@@ -6,7 +6,7 @@ Static landing page and partnership materials for Pinnacle Restaurant Manager.
 
 | File | Description |
 |------|-------------|
-| `index.html` | Main site — live demo embed, features, pricing |
+| `index.html` | Main site — live demo embed, features, POS/kitchen, menu platform, pricing |
 | `pitch.html` | **Public** mini pitch + request form for the private deck |
 | `pitch-request.js` | Posts form to `{appUrl}/api/pitch-request` |
 | `pricing.html` | Redirects to `index.html#pricing` |

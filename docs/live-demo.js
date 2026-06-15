@@ -138,7 +138,7 @@
     return (
       "Timed out connecting to <code>" +
       activeUrl +
-      "</code>. Run <code>npm run dev</code>, note the port in the terminal, then open <code>http://localhost:PORT/docs</code>."
+      "</code>. Run <code>npm run dev</code>, then open <code>http://localhost:PORT/docs</code>."
     );
   }
 
@@ -399,7 +399,7 @@
           heroSlot.innerHTML = "";
           heroSlot.appendChild(
             createFallback(
-              "No dev server found. Run <code>npm run dev</code> in the project root, then open <code>http://localhost:PORT/docs/</code>."
+              "No dev server found. Run <code>npm run dev</code> in the project root, then open <code>http://localhost:PORT/docs</code>."
             )
           );
           return "";

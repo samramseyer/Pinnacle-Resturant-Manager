@@ -24,6 +24,16 @@ function resolveDocsPath(segments: string[] | undefined): string | null {
   return full;
 }
 
+function prepareDocsHtml(html: string): string {
+  let out = html.replace(/<base\s+href="[^"]*"\s*\/?>\s*/gi, "");
+  out = out.replace('href="styles.css"', 'href="/docs/styles.css"');
+  out = out.replace(/href="\.\/assets\//g, 'href="/docs/assets/');
+  out = out.replace(/src="\.\/assets\//g, 'src="/docs/assets/');
+  out = out.replace(/href="\.\/index\.html/g, 'href="/docs');
+  out = out.replace(/href="\.\/pitch\.html/g, 'href="/docs/pitch.html');
+  return out;
+}
+
 export async function GET(
   _request: NextRequest,
   context: { params: Promise<{ slug?: string[] }> }
@@ -39,13 +49,8 @@ export async function GET(
     const ext = path.extname(filePath).toLowerCase();
     let body: BodyInit = new Uint8Array(raw);
 
-    if (ext === ".html" && (!slug?.length || (slug.length === 1 && slug[0] === "index.html"))) {
-      const html = raw.toString("utf-8");
-      if (!html.includes("<base ")) {
-        body = html.replace("<head>", '<head>\n  <base href="/docs/" />');
-      } else {
-        body = html;
-      }
+    if (ext === ".html") {
+      body = prepareDocsHtml(raw.toString("utf-8"));
     }
 
     return new NextResponse(body, {

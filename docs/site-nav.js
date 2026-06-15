@@ -5,25 +5,38 @@
   var SECTION_LINKS = [
     { hash: "#top", label: "Live Demo" },
     { hash: "#features", label: "Features" },
+    { hash: "#pos-kitchen", label: "POS" },
+    { hash: "#menu-platform", label: "Menu" },
     { hash: "#command-center", label: "AI" },
     { hash: "#analytics", label: "Analytics" },
     { hash: "#pricing", label: "Pricing" },
   ];
 
+  function docsAssetBase() {
+    if (location.pathname.indexOf("/docs") === 0) return "/docs/";
+    return (window.PINNACLE_DOCS_BASE || "./").replace(/\/?$/, "/");
+  }
+
   function isPitchPage() {
-    return /pitch\.html$/i.test(location.pathname);
+    return /pitch\.html$/i.test(location.pathname) || /\/docs\/pitch\.html$/i.test(location.pathname);
   }
 
   function homeBase() {
-    return isPitchPage() ? "./index.html" : "";
+    if (isPitchPage()) {
+      return location.pathname.indexOf("/docs") === 0 ? "/docs" : "./index.html";
+    }
+    return "";
   }
 
   function sectionHref(hash) {
+    if (location.pathname.indexOf("/docs") === 0 && !isPitchPage()) {
+      return "/docs" + hash;
+    }
     return homeBase() + hash;
   }
 
   function investorsHref() {
-    return "./pitch.html";
+    return location.pathname.indexOf("/docs") === 0 ? "/docs/pitch.html" : "./pitch.html";
   }
 
   function logoHref() {
@@ -47,6 +60,7 @@
     var mount = document.getElementById("site-nav");
     if (!mount) return;
 
+    var assetBase = docsAssetBase();
     var desktop = SECTION_LINKS.map(function (item) {
       return link(sectionHref(item.hash), item.label);
     }).join("");
@@ -64,7 +78,9 @@
       '<div class="nav-inner">' +
       '<a href="' +
       logoHref() +
-      '" class="nav-logo-link"><img src="./assets/logo-nav.svg" alt="Pinnacle Restaurant Manager" class="nav-logo" width="200" height="40" /></a>' +
+      '" class="nav-logo-link"><img src="' +
+      assetBase +
+      'assets/logo-nav.svg" alt="Pinnacle Restaurant Manager" class="nav-logo" width="200" height="40" /></a>' +
       '<nav class="nav-links" aria-label="Main">' +
       desktop +
       "</nav>" +

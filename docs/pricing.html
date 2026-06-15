@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="refresh" content="0; url=index.html#pricing" />
   <title>Pricing — Pinnacle Restaurant Manager</title>
   <script>
     (function () {
       var hash = location.hash || "#pricing";
-      location.replace("index.html" + hash);
+      var target =
+        location.pathname.indexOf("/docs") === 0 ? "/docs" + hash : "index.html" + hash;
+      location.replace(target);
     })();
   </script>
 </head>

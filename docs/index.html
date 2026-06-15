@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Pinnacle Restaurant Manager — try the full app live in your browser. Expand to explore orders, inventory, analytics, and the AI Command Center." />
+  <meta name="description" content="Pinnacle Restaurant Manager — POS with kitchen routing, menu engineering, omnichannel sync, split checks, Stripe billing, 12-tab analytics, and AI Command Center. Try the live demo." />
   <meta name="theme-color" content="#0f172a" />
   <title>Pinnacle Restaurant Manager — AI-Powered Restaurant Operations</title>
   <link rel="icon" href="./assets/logo.png" type="image/png" />
@@ -42,7 +42,8 @@
             <div class="badge">✦ AI-powered restaurant operations</div>
             <h1>Run your restaurant.<span class="accent">Know your numbers.</span></h1>
             <p class="hero-lead">
-              Pinnacle is an all-in-one manager — orders, inventory, staff, finances,
+              Pinnacle is an all-in-one manager — full POS with split checks and kitchen routing,
+              menu engineering with recipe costing, omnichannel menu sync to six channels,
               12-tab analytics, and an AI command center that answers questions like
               <em>"What's hurting my profit this week?"</em> using live data from every
               part of your business.
@@ -75,9 +76,9 @@
 
         <div class="stats-bar">
           <div><div class="stat-value">12</div><div class="stat-label">Analytics modules</div></div>
+          <div><div class="stat-value">6</div><div class="stat-label">Menu channels synced</div></div>
           <div><div class="stat-value">350+</div><div class="stat-label">AI question library</div></div>
-          <div><div class="stat-value">5</div><div class="stat-label">Staff roles supported</div></div>
-          <div><div class="stat-value">&lt; 2 min</div><div class="stat-label">Setup time</div></div>
+          <div><div class="stat-value">5</div><div class="stat-label">Staff roles &amp; permissions</div></div>
         </div>
       </div>
     </section>
@@ -107,35 +108,60 @@
             <h3>12-Tab Analytics Suite</h3>
             <p>Sales, food cost, labor, menu engineering, marketing, guests, ops, purchasing, forecasting, profit, external factors, executive.</p>
           </article>
-          <article class="feature-card">
-            <div class="feature-icon">📋</div>
-            <h3>Orders &amp; POS Flow</h3>
-            <p>Create orders, track status, link to tables, capture channel and guest data.</p>
+          <article class="feature-card highlight">
+            <div class="feature-icon">🧾</div>
+            <h3>POS &amp; Serve Flow</h3>
+            <p>Split checks, seat-by-table ordering, fire → ready → served → pay, cash/card/mobile payments via Square or Stripe Connect.</p>
+          </article>
+          <article class="feature-card highlight">
+            <div class="feature-icon">👨‍🍳</div>
+            <h3>Kitchen &amp; KDS</h3>
+            <p>Route items to grill, fry, bar, or expo. Course apps/mains/dessert with hold &amp; fire. Live kitchen display system.</p>
+          </article>
+          <article class="feature-card highlight">
+            <div class="feature-icon">🍽️</div>
+            <h3>Menu as Revenue Asset</h3>
+            <p>Engineering matrix (stars &amp; dogs), sales categories for accounting, recipe builds, and theoretical food cost with inventory depletion on sale.</p>
           </article>
           <article class="feature-card">
-            <div class="feature-icon">🍽️</div>
-            <h3>Menu Management</h3>
-            <p>Categories, pricing, availability, and recipe costs for menu engineering.</p>
+            <div class="feature-icon">📡</div>
+            <h3>Omnichannel Menu Sync</h3>
+            <p>One source of truth — push to POS, QR tableside, website, DoorDash, Uber Eats, and Grubhub with per-channel markup.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">🚫</div>
+            <h3>BOH Controls</h3>
+            <p>Instant 86, live stock countdowns, and daypart menus — syncs to POS in real time when items run out.</p>
           </article>
           <article class="feature-card">
             <div class="feature-icon">📦</div>
             <h3>Inventory &amp; Food Cost</h3>
-            <p>Stock levels, waste logs, vendor pricing, and food cost variance.</p>
+            <p>Stock levels, barcode scan, waste logs, vendor pricing, and variance vs. theoretical usage from recipes.</p>
           </article>
           <article class="feature-card">
             <div class="feature-icon">👥</div>
-            <h3>Staff &amp; Scheduling</h3>
-            <p>Team members, roles, shifts, and labor performance analytics.</p>
+            <h3>Staff, Schedule &amp; Hiring</h3>
+            <p>Five role types with permissions, shift scheduling, timeclock, and text-to-apply hiring flows.</p>
           </article>
           <article class="feature-card">
             <div class="feature-icon">🪑</div>
-            <h3>Table Floor Plan</h3>
-            <p>Visual table map — available, occupied, and reserved states.</p>
+            <h3>Tables &amp; Guest Ordering</h3>
+            <p>Visual floor plan plus QR tableside menus guests open on their phones — same live menu as POS.</p>
           </article>
           <article class="feature-card">
             <div class="feature-icon">💰</div>
             <h3>Finances &amp; Receipt OCR</h3>
             <p>AI receipt scanning extracts vendor, amount, and category automatically.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">💳</div>
+            <h3>Billing &amp; Payments</h3>
+            <p>Stripe subscription autopay for your plan. Connect Square or Stripe for guest card payments at the table.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">🚀</div>
+            <h3>Guided Onboarding</h3>
+            <p>Self-serve signup → restaurant details → optional sample data → billing setup → launch dashboard in minutes.</p>
           </article>
           <article class="feature-card">
             <div class="feature-icon">📷</div>
@@ -150,9 +176,87 @@
           <article class="feature-card">
             <div class="feature-icon">🏢</div>
             <h3>Multi-Location</h3>
-            <p>Switch locations — every metric scoped per restaurant.</p>
+            <p>Switch locations — every metric, menu, and team scoped per restaurant.</p>
           </article>
         </div>
+      </div>
+    </section>
+
+    <!-- POS & Kitchen -->
+    <section class="section section-dark" id="pos-kitchen">
+      <div class="container">
+        <div class="section-header">
+          <p class="eyebrow">Front &amp; back of house</p>
+          <h2>POS built for real service — not just order entry</h2>
+          <p>From the first tap to the last payment, every step is tracked for analytics and kitchen execution.</p>
+        </div>
+        <div class="two-col">
+          <div>
+            <ul class="check-list">
+              <li><strong>Serve flow</strong> — hold tickets, fire courses, mark ready &amp; served, then pay</li>
+              <li><strong>Split checks</strong> — by seat or item, cash/card/mobile on the same check</li>
+              <li><strong>Fractional modifiers</strong> — half-and-half pizza toppings and combo splits</li>
+              <li><strong>Station routing</strong> — grill, fry, cold, pizza, service bar, expo</li>
+              <li><strong>KDS display</strong> — kitchen sees only what matters at each station</li>
+              <li><strong>Recipe depletion</strong> — firing an order deducts exact ingredient quantities from inventory</li>
+            </ul>
+            <a href="#top" class="btn btn-primary btn-lg" style="margin-top:2rem">Try POS in the live demo ↑</a>
+          </div>
+          <div class="panel-dark">
+            <h3 style="font-size:1.125rem;font-weight:700;margin-bottom:1rem">Kitchen stations</h3>
+            <div class="pill-row">
+              <span class="pill hot">Grill KDS</span>
+              <span class="pill hot">Fry</span>
+              <span class="pill">Cold / Salad</span>
+              <span class="pill">Pizza</span>
+              <span class="pill">Service Bar</span>
+              <span class="pill">Expo</span>
+            </div>
+            <p style="margin-top:1.25rem;color:var(--slate-300);font-size:0.9375rem;line-height:1.7">
+              Items route automatically by category or explicit station assignment. Combos split to
+              multiple stations. Course-level fire lets you hold apps while mains are still ordering.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Menu platform -->
+    <section class="section section-alt" id="menu-platform">
+      <div class="container">
+        <div class="section-header">
+          <p class="eyebrow">Menu as a financial asset</p>
+          <h2>One menu. Six channels. Profit-aware engineering.</h2>
+          <p>Edit once — sync everywhere with channel-specific pricing. Know which items are stars and which are dogs.</p>
+        </div>
+        <div class="highlight-grid">
+          <div class="highlight-card">
+            <div class="icon">⭐</div>
+            <h3>Menu engineering matrix</h3>
+            <p>Stars, plowhorses, puzzles, and dogs — popularity vs. margin over the last 30 days, right on the Menu page.</p>
+          </div>
+          <div class="highlight-card">
+            <div class="icon">🧮</div>
+            <h3>Recipe costing</h3>
+            <p>Build each plate from inventory ingredients. See food cost % and margin on every item before you reprice.</p>
+          </div>
+          <div class="highlight-card">
+            <div class="icon">🏷️</div>
+            <h3>Sales categories</h3>
+            <p>Food, liquor, draft beer, wine, NA beverages, merchandise — granular accounting behind every item.</p>
+          </div>
+        </div>
+        <div class="pill-row" style="margin-top:2rem;justify-content:center">
+          <span class="pill hot">In-store POS</span>
+          <span class="pill hot">QR tableside</span>
+          <span class="pill hot">Website</span>
+          <span class="pill hot">DoorDash</span>
+          <span class="pill hot">Uber Eats</span>
+          <span class="pill hot">Grubhub</span>
+        </div>
+        <p style="margin-top:1.25rem;text-align:center;color:var(--slate-600);font-size:0.9375rem;max-width:40rem;margin-left:auto;margin-right:auto">
+          Set markup per channel (e.g. +15% on delivery apps). Menu revision bumps trigger sync — guests always see current items and 86s.
+        </p>
       </div>
     </section>
 
@@ -235,18 +339,18 @@
         <div class="steps">
           <div class="step">
             <div class="step-num">1</div>
-            <h3>Use the live demo</h3>
-            <p>Explore the full app in the hero window — click Expand for a larger view.</p>
+            <h3>Sign up &amp; onboard</h3>
+            <p>Pick a plan, create your account, add restaurant details, and optionally load sample data — guided wizard included.</p>
           </div>
           <div class="step">
             <div class="step-num">2</div>
-            <h3>Open the full app</h3>
-            <p>Launch the complete demo with menu, staff, orders, and 12 analytics tabs.</p>
+            <h3>Try the live demo</h3>
+            <p>Explore POS, menu engineering, KDS, and analytics in the hero window — click Expand for full desktop.</p>
           </div>
           <div class="step">
             <div class="step-num">3</div>
             <h3>Run your restaurant</h3>
-            <p>Every action feeds analytics. Ask cross-domain questions anytime.</p>
+            <p>Every order, recipe depletion, and sale feeds analytics. Ask cross-domain questions anytime.</p>
           </div>
         </div>
       </div>
@@ -279,8 +383,8 @@
             </div>
             <p class="pricing-blurb">Get organized without a long sales call. Everything you need to run one location day to day.</p>
             <ul class="pricing-features">
-              <li>Dashboard &amp; orders tracking</li>
-              <li>Menu management</li>
+              <li>Dashboard &amp; order tracking</li>
+              <li>Menu management &amp; tableside QR</li>
               <li>Basic inventory</li>
               <li>Staff list &amp; roles</li>
               <li>Basic analytics</li>
@@ -302,13 +406,15 @@
             <p class="pricing-blurb">The plan we recommend. Affordable vs. MarginEdge or Restaurant365 — deep enough to run profit like a pro.</p>
             <ul class="pricing-features">
               <li>Everything in Starter, plus:</li>
-              <li>Full inventory, waste logs &amp; vendor pricing</li>
-              <li>Recipe costing &amp; food cost reports</li>
+              <li>Full POS serve flow &amp; split checks</li>
+              <li>Kitchen routing &amp; KDS</li>
+              <li>Omnichannel menu sync <span class="pricing-muted">(6 channels)</span></li>
+              <li>Full inventory, waste logs &amp; barcode scan</li>
+              <li>Recipe costing &amp; menu engineering matrix</li>
               <li>Staff scheduling &amp; labor analytics</li>
-              <li>Menu engineering</li>
               <li>Receipt OCR <span class="pricing-muted">(limited/month)</span></li>
               <li>AI Command Center <span class="pricing-muted">(standard)</span></li>
-              <li>Most analytics modules</li>
+              <li>Stripe billing autopay</li>
               <li>Up to <strong>10</strong> users</li>
             </ul>
             <a href="#" class="btn btn-primary pricing-cta" data-app-link="/signup" hidden>Start with Growth</a>
@@ -325,6 +431,9 @@
               <li>Everything in Growth, plus:</li>
               <li>Full 12-tab analytics suite</li>
               <li>Advanced AI Command Center</li>
+              <li>BOH controls &amp; daypart menus</li>
+              <li>Square / Stripe Connect guest payments</li>
+              <li>Hiring &amp; text-to-apply</li>
               <li>Profit by item, employee, shift, hour &amp; channel</li>
               <li>Forecasting &amp; purchasing analytics</li>
               <li>Marketing ROI &amp; guest experience</li>
@@ -462,7 +571,7 @@
       <div class="footer-grid">
         <div>
           <img src="./assets/logo.png" alt="Pinnacle Restaurant Manager" class="footer-logo" width="220" height="44" />
-          <p class="footer-tagline">AI-powered restaurant management — operations, analytics, and a command center that answers the questions owners actually ask.</p>
+          <p class="footer-tagline">AI-powered restaurant management — POS, kitchen routing, menu engineering, omnichannel sync, analytics, and a command center that answers the questions owners actually ask.</p>
         </div>
         <div class="footer-cols">
           <div class="footer-col">
@@ -470,6 +579,8 @@
             <ul>
               <li><a href="#top">Live demo</a></li>
               <li><a href="#features">Features</a></li>
+              <li><a href="#pos-kitchen">POS &amp; Kitchen</a></li>
+              <li><a href="#menu-platform">Menu platform</a></li>
               <li><a href="#analytics">Analytics</a></li>
               <li><a href="#pricing">Pricing</a></li>
             </ul>
@@ -501,6 +612,7 @@
             <ul>
               <li>Next.js 15</li>
               <li>Prisma + SQLite</li>
+              <li>Stripe · Square</li>
               <li>OpenAI (optional)</li>
             </ul>
           </div>
