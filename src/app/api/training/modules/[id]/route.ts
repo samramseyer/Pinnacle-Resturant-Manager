@@ -20,10 +20,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "No staff profile linked to your account" }, { status: 403 });
   }
 
-  const module = await prisma.trainingModule.findFirst({
+  const trainingModule = await prisma.trainingModule.findFirst({
     where: { id: moduleId, locationId, active: true },
   });
-  if (!module) {
+  if (!trainingModule) {
     return NextResponse.json({ error: "Module not found" }, { status: 404 });
   }
 
@@ -32,14 +32,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "Signature name required" }, { status: 400 });
   }
 
-  const expiresAt = module.renewalMonths
-    ? addMonths(new Date(), module.renewalMonths)
+  const expiresAt = trainingModule.renewalMonths
+    ? addMonths(new Date(), trainingModule.renewalMonths)
     : null;
 
   const completion = await prisma.trainingCompletion.create({
     data: {
       locationId,
-      moduleId: module.id,
+      moduleId: trainingModule.id,
       staffMemberId: staffMember.id,
       signatureName,
       score: body.score != null ? Number(body.score) : null,
@@ -59,22 +59,22 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const { id: moduleId } = await params;
   const locationId = await getLocationIdFromRequest(request);
 
-  const module = await prisma.trainingModule.findFirst({
+  const trainingModule = await prisma.trainingModule.findFirst({
     where: { id: moduleId, locationId, active: true },
   });
-  if (!module) {
+  if (!trainingModule) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   return NextResponse.json({
-    id: module.id,
-    moduleKey: module.moduleKey,
-    title: module.title,
-    kind: module.kind,
-    summary: module.summary,
-    content: module.content,
-    estimatedMinutes: module.estimatedMinutes,
-    required: module.required,
-    renewalMonths: module.renewalMonths,
+    id: trainingModule.id,
+    moduleKey: trainingModule.moduleKey,
+    title: trainingModule.title,
+    kind: trainingModule.kind,
+    summary: trainingModule.summary,
+    content: trainingModule.content,
+    estimatedMinutes: trainingModule.estimatedMinutes,
+    required: trainingModule.required,
+    renewalMonths: trainingModule.renewalMonths,
   });
 }
